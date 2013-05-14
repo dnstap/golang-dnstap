@@ -164,6 +164,11 @@ message Message {
 
     // The responder's original wire-format DNS response message, verbatim.
     optional bytes              response_message = 18;
+
+    // DNS Name Server Identifier (NSID) option (RFC 5001).
+    // If enabled, this is the NSID content configured into the DNS server which
+    // generated the dnstap "Message" payload.
+    optional bytes              nsid = 19;
 }
 
 // Technically, the protobuf Message schema above only strictly requires the
