@@ -136,23 +136,34 @@ message Message {
     // The DNS query class.
     required uint32             query_class = 11;
 
+    // The time at which the DNS query message was sent or received, depending
+    // on whether this is an AUTH_QUERY, RESOLVER_QUERY, or CLIENT_QUERY.
+    // This is the number of seconds since the UNIX epoch.
+    optional uint64             query_time_sec = 12;
+
     // The time at which the DNS query message was sent or received.
-    // This is the number of microseconds since the UNIX epoch.
-    optional fixed64            query_time = 12;
+    // This is the seconds fraction, expressed as a count of nanoseconds.
+    optional fixed32            query_time_nsec = 13;
 
     // The initiator's original wire-format DNS query message, verbatim.
-    optional bytes              query_message = 13;
+    optional bytes              query_message = 14;
 
     // The initiator's "bailiwick" pertaining to the DNS query message. This
     // field is case folded.
-    optional bytes              query_bailiwick = 14;
+    optional bytes              query_bailiwick = 15;
+
+    // The time at which the DNS response message was sent or received,
+    // depending on whether this is an AUTH_RESPONSE, RESOLVER_RESPONSE, or
+    // CLIENT_RESPONSE.
+    // This is the number of seconds since the UNIX epoch.
+    optional uint64             response_time_sec = 16;
 
     // The time at which the DNS response message was sent or received.
-    // This is the number of microseconds since the UNIX epoch.
-    optional fixed64            response_time = 15;
+    // This is the seconds fraction, expressed as a count of nanoseconds.
+    optional fixed32            response_time_nsec = 17;
 
     // The responder's original wire-format DNS response message, verbatim.
-    optional bytes              response_message = 16;
+    optional bytes              response_message = 18;
 }
 
 // Technically, the protobuf Message schema above only strictly requires the
