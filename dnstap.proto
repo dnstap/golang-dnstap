@@ -15,6 +15,12 @@ message Dnstap {
     // generated this message.
     optional bytes      nsid = 1;
 
+    // DNS server version.
+    // If enabled, this is the version string of the DNS server which generated
+    // this message. Typically this would be the same string as returned by a
+    // "version.bind" query.
+    optional bytes      version = 2;
+
     // Identifies which field below is filled in.
     enum Type {
         MESSAGE = 1;
