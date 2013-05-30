@@ -10,10 +10,11 @@ package dnstap;
 // of dnstap payload is defined.
 // See: https://developers.google.com/protocol-buffers/docs/techniques#union
 message Dnstap {
-    // DNS Name Server Identifier (NSID) option (RFC 5001).
-    // If enabled, this is the NSID content configured into the DNS server which
-    // generated this message.
-    optional bytes      nsid = 1;
+    // DNS server identity.
+    // If enabled, this is the identity string of the DNS server which generated
+    // this message. Typically this would be the same string as returned by an
+    // "NSID" (RFC 5001) query.
+    optional bytes      identity = 1;
 
     // DNS server version.
     // If enabled, this is the version string of the DNS server which generated
