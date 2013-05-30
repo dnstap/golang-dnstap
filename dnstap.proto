@@ -159,9 +159,9 @@ message Message {
     // The initiator's original wire-format DNS query message, verbatim.
     optional bytes              query_message = 14;
 
-    // The initiator's "bailiwick" pertaining to the DNS query message. This
+    // The "zone" or "bailiwick" pertaining to the DNS query message. This
     // field is case folded.
-    optional bytes              query_bailiwick = 15;
+    optional bytes              query_zone = 15;
 
     // The time at which the DNS response message was sent or received,
     // depending on whether this is an AUTH_RESPONSE, RESOLVER_RESPONSE, or
@@ -199,14 +199,14 @@ message Message {
 //      query_name, query_type, query_class
 //      query_message
 //      query_time_sec, query_time_nsec
-//      query_bailiwick
+//      query_zone
 //      response_address, response_port
 
 // RESOLVER_RESPONSE:
 //      socket_family, socket_protocol
 //      query_name, query_type, query_class
 //      query_time_sec, query_time_nsec
-//      query_bailiwick
+//      query_zone
 //      response_address, response_port
 //      response_message
 //      response_time_sec, response_time_nsec
