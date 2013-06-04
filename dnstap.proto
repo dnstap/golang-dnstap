@@ -51,9 +51,9 @@ enum SocketProtocol {
 // certain requirements based on the MessageType, see below.
 message Message {
 
-    // There are currently six types of "Message" defined, corresponding to
-    // the four arrows in the following diagram, slightly modified from RFC
-    // 1035 section 2:
+    // There are six types of "Message" defined that correspond to the four
+    // arrows in the following diagram, slightly modified from RFC 1035
+    // section 2:
 
     //    +---------+ recursive     +----------+           +--------+
     //    |         | queries       |          |queries    |        |
@@ -72,6 +72,10 @@ message Message {
     // considered to be distinct events. No Type values are assigned for the
     // stub resolver arrows' "ends", because dnstap is intended for use in
     // DNS servers, not stub clients.
+
+    // Two additional types of "Message" have been defined for the
+    // "forwarding" case where an upstream DNS server is responsible for
+    // further recursion.
 
     enum Type {
         // AUTH_QUERY is a DNS query message received from a recursive
@@ -94,15 +98,30 @@ message Message {
         // perspective of the recursive server.
         RESOLVER_RESPONSE = 4;
 
-        // CLIENT_QUERY is a DNS query message sent from a client to a
-        // recursive server. A client is a stub resolver or forwarder or
-        // some other type of software which sets the RD (recursion desired)
-        // bit when querying a recursive server.
+        // CLIENT_QUERY is a DNS query message sent from a client to a DNS
+        // server which is expected to perform further recursion, from the
+        // perspective of the DNS server. The client may be a stub resolver or
+        // forwarder or some other type of software which typically sets the RD
+        // (recursion desired) bit when querying the DNS server. The DNS server
+        // may be a simple forwarding proxy or it may be a full recursive
+        // resolver.
         CLIENT_QUERY = 5;
 
-        // CLIENT_RESPONSE is a DNS response message sent from a recursive
-        // server to a client.
+        // CLIENT_RESPONSE is a DNS response message sent from a DNS server to
+        // a client. The DNS server typically sets the RA (recursion available)
+        // bit when responding.
         CLIENT_RESPONSE = 6;
+
+        // FORWARDER_QUERY is a DNS query message sent from a downstream DNS
+        // server to an upstream DNS server which is expected to perform
+        // further recursion, from the perspective of the downstream DNS
+        // server.
+        FORWARDER_QUERY = 7;
+
+        // FORWARDER_RESPONSE is a DNS response message sent from an upstream
+        // DNS server performing recursion to a downstream DNS server, from the
+        // perspective of the downstream DNS server.
+        FORWARDER_RESPONSE = 8;
     }
 
     // One of the Type values described above.
