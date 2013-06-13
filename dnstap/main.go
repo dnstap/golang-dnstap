@@ -47,11 +47,11 @@ func main() {
     runtime.GOMAXPROCS(runtime.NumCPU())
 
     flag.Parse()
-    if *flagYamlText {
-        convert = dnstap.YamlConvert
-    }
     if *flagQuietText || (*flagWriteFile == "" || *flagWriteFile == "-") {
         convert = dnstap.QuietTextConvert
+    }
+    if *flagYamlText {
+        convert = dnstap.YamlConvert
     }
     if *flagWriteFile == "" || *flagWriteFile == "-" {
         unbuffered = true
