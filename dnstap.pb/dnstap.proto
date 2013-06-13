@@ -1,0 +1,242 @@
+// dnstap: flexible, structured event replication format for DNS servers
+
+// This file contains the protobuf schemas for the "dnstap" structured event
+// replication format for DNS servers. 
+
+package dnstap;
+
+// "Dnstap": this is the top-level dnstap type, which is a "union" type that
+// contains other kinds of dnstap payloads, although currently only one type
+// of dnstap payload is defined.
+// See: https://developers.google.com/protocol-buffers/docs/techniques#union
+message Dnstap {
+    // DNS server identity.
+    // If enabled, this is the identity string of the DNS server which generated
+    // this message. Typically this would be the same string as returned by an
+    // "NSID" (RFC 5001) query.
+    optional bytes      identity = 1;
+
+    // DNS server version.
+    // If enabled, this is the version string of the DNS server which generated
+    // this message. Typically this would be the same string as returned by a
+    // "version.bind" query.
+    optional bytes      version = 2;
+
+    // Identifies which field below is filled in.
+    enum Type {
+        MESSAGE = 1;
+    }
+    required Type       type = 15;
+
+    // One of the following will be filled in.
+    optional Message    message = 14;
+}
+
+// SocketFamily: the network protocol family of a socket. This specifies how
+// to interpret "network address" fields.
+enum SocketFamily {
+    INET = 1;   // IPv4 (RFC 791)
+    INET6 = 2;  // IPv6 (RFC 2460)
+}
+
+// SocketProtocol: the transport protocol of a socket. This specifies how to
+// interpret "transport port" fields.
+enum SocketProtocol {
+    UDP = 1;    // User Datagram Protocol (RFC 768)
+    TCP = 2;    // Transmission Control Protocol (RFC 793)
+}
+
+// Message: a wire-format (RFC 1035 section 4) DNS message and associated
+// metadata. Applications generating "Message" payloads should follow
+// certain requirements based on the MessageType, see below.
+message Message {
+
+    // There are six types of "Message" defined that correspond to the four
+    // arrows in the following diagram, slightly modified from RFC 1035
+    // section 2:
+
+    //    +---------+ recursive     +----------+           +--------+
+    //    |         | queries       |          |queries    |        |
+    //    | Stub    |-------------->| Recursive|---------->| Auth.  |
+    //    | Resolver|               | Server   |           | Name   |
+    //    |         |<--------------|          |<----------| Server |
+    //    +---------+ responses     |          |responses  |        |
+    //                              +----------+           +--------+
+    //                              |  Central |
+    //                              |   cache  |
+    //                              +----------+
+
+    // Two of the arrows, the "queries" and "responses" between the
+    // recursive server and the authoritative name server, have two Type
+    // values each, one for each "end" of each arrow, because these are
+    // considered to be distinct events. No Type values are assigned for the
+    // stub resolver arrows' "ends", because dnstap is intended for use in
+    // DNS servers, not stub clients.
+
+    // Two additional types of "Message" have been defined for the
+    // "forwarding" case where an upstream DNS server is responsible for
+    // further recursion.
+
+    enum Type {
+        // AUTH_QUERY is a DNS query message received from a recursive
+        // server by an authoritative name server, from the perspective of
+        // the authorative name server.
+        AUTH_QUERY = 1;
+
+        // AUTH_RESPONSE is a DNS response message sent from an
+        // authoritative name server to a recursive server, from the
+        // perspective of the authoritative name server.
+        AUTH_RESPONSE = 2;
+
+        // RESOLVER_QUERY is a DNS query message sent from a recursive
+        // server to an authoritative name server, from the perspective of
+        // the recursive server.
+        RESOLVER_QUERY = 3;
+
+        // RESOLVER_RESPONSE is a DNS response message received from an
+        // authoritative name server by a recursive server, from the
+        // perspective of the recursive server.
+        RESOLVER_RESPONSE = 4;
+
+        // CLIENT_QUERY is a DNS query message sent from a client to a DNS
+        // server which is expected to perform further recursion, from the
+        // perspective of the DNS server. The client may be a stub resolver or
+        // forwarder or some other type of software which typically sets the RD
+        // (recursion desired) bit when querying the DNS server. The DNS server
+        // may be a simple forwarding proxy or it may be a full recursive
+        // resolver.
+        CLIENT_QUERY = 5;
+
+        // CLIENT_RESPONSE is a DNS response message sent from a DNS server to
+        // a client. The DNS server typically sets the RA (recursion available)
+        // bit when responding.
+        CLIENT_RESPONSE = 6;
+
+        // FORWARDER_QUERY is a DNS query message sent from a downstream DNS
+        // server to an upstream DNS server which is expected to perform
+        // further recursion, from the perspective of the downstream DNS
+        // server.
+        FORWARDER_QUERY = 7;
+
+        // FORWARDER_RESPONSE is a DNS response message sent from an upstream
+        // DNS server performing recursion to a downstream DNS server, from the
+        // perspective of the downstream DNS server.
+        FORWARDER_RESPONSE = 8;
+    }
+
+    // One of the Type values described above.
+    required Type               type = 1;
+
+    // One of the SocketFamily values described above.
+    optional SocketFamily       socket_family = 2;
+
+    // One of the SocketProtocol values described above.
+    optional SocketProtocol     socket_protocol = 3;
+
+    // The network address of the message initiator.
+    // For SocketFamily INET, this field is 4 octets (IPv4 address).
+    // For SocketFamily INET6, this field is 16 octets (IPv6 address).
+    optional bytes              query_address = 4;
+
+    // The network address of the message responder.
+    // For SocketFamily INET, this field is 4 octets (IPv4 address).
+    // For SocketFamily INET6, this field is 16 octets (IPv6 address).
+    optional bytes              response_address = 5;
+
+    // The transport port of the message initiator.
+    // This is a 16-bit UDP or TCP port number, depending on SocketProtocol.
+    optional uint32             query_port = 6;
+
+    // The transport port of the message responder.
+    // This is a 16-bit UDP or TCP port number, depending on SocketProtocol.
+    optional uint32             response_port = 7;
+
+    // The DNS message ID of the query and/or response message.
+    // This is a 16-bit number.
+    optional uint32             message_id = 8;
+
+    // The wire-format DNS query name. This field is case folded. The query
+    // name appears in its original case as sent or received on the wire in
+    // the question section of the verbatim query or response message.
+    optional bytes              query_name = 9;
+
+    // The DNS query type.
+    optional uint32             query_type = 10;
+
+    // The DNS query class.
+    optional uint32             query_class = 11;
+
+    // The time at which the DNS query message was sent or received, depending
+    // on whether this is an AUTH_QUERY, RESOLVER_QUERY, or CLIENT_QUERY.
+    // This is the number of seconds since the UNIX epoch.
+    optional uint64             query_time_sec = 12;
+
+    // The time at which the DNS query message was sent or received.
+    // This is the seconds fraction, expressed as a count of nanoseconds.
+    optional fixed32            query_time_nsec = 13;
+
+    // The initiator's original wire-format DNS query message, verbatim.
+    optional bytes              query_message = 14;
+
+    // The "zone" or "bailiwick" pertaining to the DNS query message. This
+    // field is case folded.
+    optional bytes              query_zone = 15;
+
+    // The time at which the DNS response message was sent or received,
+    // depending on whether this is an AUTH_RESPONSE, RESOLVER_RESPONSE, or
+    // CLIENT_RESPONSE.
+    // This is the number of seconds since the UNIX epoch.
+    optional uint64             response_time_sec = 16;
+
+    // The time at which the DNS response message was sent or received.
+    // This is the seconds fraction, expressed as a count of nanoseconds.
+    optional fixed32            response_time_nsec = 17;
+
+    // The responder's original wire-format DNS response message, verbatim.
+    optional bytes              response_message = 18;
+}
+
+// All fields except for 'type' in the Message schema are optional.
+// It is recommended that at least the following fields be filled in for
+// particular types of Messages.
+
+// AUTH_QUERY:
+//      socket_family, socket_protocol
+//      query_address, query_port
+//      query_message
+//      query_time_sec, query_time_nsec
+
+// AUTH_RESPONSE:
+//      socket_family, socket_protocol
+//      query_address, query_port
+//      query_time_sec, query_time_nsec
+//      response_message
+//      response_time_sec, response_time_nsec
+
+// RESOLVER_QUERY:
+//      socket_family, socket_protocol
+//      query_name, query_type, query_class
+//      query_message
+//      query_time_sec, query_time_nsec
+//      query_zone
+//      response_address, response_port
+
+// RESOLVER_RESPONSE:
+//      socket_family, socket_protocol
+//      query_name, query_type, query_class
+//      query_time_sec, query_time_nsec
+//      query_zone
+//      response_address, response_port
+//      response_message
+//      response_time_sec, response_time_nsec
+
+// CLIENT_QUERY:
+//      socket_family, socket_protocol
+//      query_message
+//      query_time_sec, query_time_nsec
+
+// CLIENT_RESPONSE:
+//      socket_family, socket_protocol
+//      query_time_sec, query_time_nsec
+//      response_message
+//      response_time_sec, response_time_nsec
