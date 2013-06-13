@@ -22,7 +22,7 @@ import "os"
 import "os/signal"
 import "runtime"
 
-import dnstap "golang-dnstap"
+import dnstap "github.com/dnstap/golang-dnstap"
 
 const (
     channelSize     = 32
