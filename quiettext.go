@@ -92,6 +92,12 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
          }
     }
 
+    if m.SocketProtocol != nil {
+        s.WriteString(m.SocketProtocol.String())
+    }
+    s.WriteString(" ")
+
+
     if m.QueryName != nil {
         name, _, err := dns.UnpackDomainName(m.QueryName, 0)
         if err != nil {
