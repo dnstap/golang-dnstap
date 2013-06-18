@@ -93,6 +93,14 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     }
     s.WriteString(" ")
 
+    if isQuery {
+        s.WriteString(strconv.Itoa(len(m.QueryMessage)))
+        s.WriteString("b ")
+    } else {
+        s.WriteString(strconv.Itoa(len(m.ResponseMessage)))
+        s.WriteString("b ")
+    }
+
     if m.QueryName != nil {
         name, _, err := dns.UnpackDomainName(m.QueryName, 0)
         if err != nil {
