@@ -29,23 +29,29 @@ import dnstapProto "github.com/dnstap/golang-dnstap/dnstap.pb"
 const quietTimeFormat = "15:04:05"
 
 func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
+    isQuery := false
+
     switch *m.Type {
     case dnstapProto.Message_CLIENT_QUERY,
          dnstapProto.Message_RESOLVER_QUERY,
          dnstapProto.Message_AUTH_QUERY,
-         dnstapProto.Message_FORWARDER_QUERY: {
-            t := time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec))
-            s.WriteString(t.Format(quietTimeFormat))
-            s.WriteString(fmt.Sprintf(".%06d", *m.QueryTimeNsec / 1000))
-         }
+         dnstapProto.Message_FORWARDER_QUERY:
+            isQuery = true
     case dnstapProto.Message_CLIENT_RESPONSE,
          dnstapProto.Message_RESOLVER_RESPONSE,
          dnstapProto.Message_AUTH_RESPONSE,
-         dnstapProto.Message_FORWARDER_RESPONSE: {
-            t := time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec))
-            s.WriteString(t.Format(quietTimeFormat))
-            s.WriteString(fmt.Sprintf(".%06d", *m.ResponseTimeNsec / 1000))
-         }
+         dnstapProto.Message_FORWARDER_RESPONSE:
+            isQuery = false
+    }
+
+    if isQuery {
+        t := time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec))
+        s.WriteString(t.Format(quietTimeFormat))
+        s.WriteString(fmt.Sprintf(".%06d", *m.QueryTimeNsec / 1000))
+    } else {
+        t := time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec))
+        s.WriteString(t.Format(quietTimeFormat))
+        s.WriteString(fmt.Sprintf(".%06d", *m.ResponseTimeNsec / 1000))
     }
     s.WriteString(" ")
 
@@ -68,35 +74,24 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
          }
     }
 
-    switch *m.Type {
-    case dnstapProto.Message_CLIENT_QUERY,
-         dnstapProto.Message_RESOLVER_QUERY,
-         dnstapProto.Message_AUTH_QUERY,
-         dnstapProto.Message_FORWARDER_QUERY: {
-            s.WriteString("Q ")
-            if m.QueryAddress != nil {
-                s.WriteString(net.IP(m.QueryAddress).String())
-            }
-            s.WriteString(" ")
-
-         }
-    case dnstapProto.Message_CLIENT_RESPONSE,
-         dnstapProto.Message_RESOLVER_RESPONSE,
-         dnstapProto.Message_AUTH_RESPONSE,
-         dnstapProto.Message_FORWARDER_RESPONSE: {
-            s.WriteString("R ")
-            if m.ResponseAddress != nil {
-                s.WriteString(net.IP(m.ResponseAddress).String())
-            }
-            s.WriteString(" ")
-         }
+    if isQuery {
+        s.WriteString("Q ")
+        if m.QueryAddress != nil {
+            s.WriteString(net.IP(m.QueryAddress).String())
+        }
+        s.WriteString(" ")
+    } else {
+        s.WriteString("R ")
+        if m.ResponseAddress != nil {
+            s.WriteString(net.IP(m.ResponseAddress).String())
+        }
+        s.WriteString(" ")
     }
 
     if m.SocketProtocol != nil {
         s.WriteString(m.SocketProtocol.String())
     }
     s.WriteString(" ")
-
 
     if m.QueryName != nil {
         name, _, err := dns.UnpackDomainName(m.QueryName, 0)
