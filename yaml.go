@@ -105,7 +105,7 @@ func yamlConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
         msg := new(dns.Msg)
         err := msg.Unpack(m.ResponseMessage)
         if err != nil {
-            s.WriteString("  # response_message: parse failed\n")
+            s.WriteString(fmt.Sprint("  # response_message: parse failed: ", err, "\n"))
         } else {
             s.WriteString("  response_message: |\n")
             s.WriteString("    " + strings.Replace(strings.TrimSpace(msg.String()), "\n", "\n    ", -1) + "\n")
