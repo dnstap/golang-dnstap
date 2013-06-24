@@ -30,6 +30,7 @@ const quietTimeFormat = "15:04:05"
 
 func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     isQuery := false
+    printQueryAddress := false
 
     switch *m.Type {
     case dnstapProto.Message_CLIENT_QUERY,
@@ -76,17 +77,26 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
 
     if isQuery {
         s.WriteString("Q ")
+    } else {
+        s.WriteString("R ")
+    }
+
+    switch *m.Type {
+    case dnstapProto.Message_CLIENT_QUERY,
+         dnstapProto.Message_AUTH_QUERY:
+            printQueryAddress = true
+    }
+
+    if printQueryAddress {
         if m.QueryAddress != nil {
             s.WriteString(net.IP(m.QueryAddress).String())
         }
-        s.WriteString(" ")
     } else {
-        s.WriteString("R ")
         if m.ResponseAddress != nil {
             s.WriteString(net.IP(m.ResponseAddress).String())
         }
-        s.WriteString(" ")
     }
+    s.WriteString(" ")
 
     if m.SocketProtocol != nil {
         s.WriteString(m.SocketProtocol.String())
