@@ -1,7 +1,7 @@
-// dnstap: flexible, structured event replication format for DNS servers
+// dnstap: flexible, structured event replication format for DNS software
 
 // This file contains the protobuf schemas for the "dnstap" structured event
-// replication format for DNS servers. 
+// replication format for DNS software.
 
 package dnstap;
 
@@ -21,6 +21,11 @@ message Dnstap {
     // this message. Typically this would be the same string as returned by a
     // "version.bind" query.
     optional bytes      version = 2;
+
+    // Extra data for this payload.
+    // This field can be used for adding an arbitrary byte-string annotation to
+    // the payload. No encoding or interpretation is applied or enforced.
+    optional bytes      extra = 3;
 
     // Identifies which field below is filled in.
     enum Type {
@@ -51,51 +56,62 @@ enum SocketProtocol {
 // certain requirements based on the MessageType, see below.
 message Message {
 
-    // There are six types of "Message" defined that correspond to the four
-    // arrows in the following diagram, slightly modified from RFC 1035
+    // There are eight types of "Message" defined that correspond to the
+    // four arrows in the following diagram, slightly modified from RFC 1035
     // section 2:
 
-    //    +---------+ recursive     +----------+           +--------+
-    //    |         | queries       |          |queries    |        |
-    //    | Stub    |-------------->| Recursive|---------->| Auth.  |
+    //    +---------+               +----------+           +--------+
+    //    |         |     query     |          |   query   |        |
+    //    | Stub    |-SQ--------CQ->| Recursive|-RQ----AQ->| Auth.  |
     //    | Resolver|               | Server   |           | Name   |
-    //    |         |<--------------|          |<----------| Server |
-    //    +---------+ responses     |          |responses  |        |
+    //    |         |<-SR--------CR-|          |<-RR----AR-| Server |
+    //    +---------+    response   |          |  response |        |
     //                              +----------+           +--------+
-    //                              |  Central |
-    //                              |   cache  |
-    //                              +----------+
 
-    // Two of the arrows, the "queries" and "responses" between the
-    // recursive server and the authoritative name server, have two Type
-    // values each, one for each "end" of each arrow, because these are
-    // considered to be distinct events. No Type values are assigned for the
-    // stub resolver arrows' "ends", because dnstap is intended for use in
-    // DNS servers, not stub clients.
+    // Each arrow has two Type values each, one for each "end" of each arrow,
+    // because these are considered to be distinct events. Each end of each
+    // arrow on the diagram above has been marked with a two-letter Type
+    // mnemonic. Clockwise from upper left, these mnemonic values are:
+    //
+    //   SQ:        STUB_QUERY
+    //   CQ:      CLIENT_QUERY
+    //   RQ:    RESOLVER_QUERY
+    //   AQ:        AUTH_QUERY
+    //   AR:        AUTH_RESPONSE
+    //   RR:    RESOLVER_RESPONSE
+    //   CR:      CLIENT_RESPONSE
+    //   SR:        STUB_RESPONSE
 
     // Two additional types of "Message" have been defined for the
     // "forwarding" case where an upstream DNS server is responsible for
-    // further recursion.
+    // further recursion. These are not shown on the diagram above, but have
+    // the following mnemonic values:
+
+    //   FQ:   FORWARDER_QUERY
+    //   FR:   FORWARDER_RESPONSE
+
+    // The "Message" Type values are defined below.
 
     enum Type {
-        // AUTH_QUERY is a DNS query message received from a recursive
-        // server by an authoritative name server, from the perspective of
-        // the authorative name server.
+        // AUTH_QUERY is a DNS query message received from a resolver by an
+        // authoritative name server, from the perspective of the authorative
+        // name server.
         AUTH_QUERY = 1;
 
-        // AUTH_RESPONSE is a DNS response message sent from an
-        // authoritative name server to a recursive server, from the
-        // perspective of the authoritative name server.
+        // AUTH_RESPONSE is a DNS response message sent from an authoritative
+        // name server to a resolver, from the perspective of the authoritative
+        // name server.
         AUTH_RESPONSE = 2;
 
-        // RESOLVER_QUERY is a DNS query message sent from a recursive
-        // server to an authoritative name server, from the perspective of
-        // the recursive server.
+        // RESOLVER_QUERY is a DNS query message sent from a resolver to an
+        // authoritative name server, from the perspective of the resolver.
+        // Resolvers typically clear the RD (recursion desired) bit when
+        // sending queries.
         RESOLVER_QUERY = 3;
 
         // RESOLVER_RESPONSE is a DNS response message received from an
-        // authoritative name server by a recursive server, from the
-        // perspective of the recursive server.
+        // authoritative name server by a resolver, from the perspective of
+        // the resolver.
         RESOLVER_RESPONSE = 4;
 
         // CLIENT_QUERY is a DNS query message sent from a client to a DNS
@@ -108,8 +124,8 @@ message Message {
         CLIENT_QUERY = 5;
 
         // CLIENT_RESPONSE is a DNS response message sent from a DNS server to
-        // a client. The DNS server typically sets the RA (recursion available)
-        // bit when responding.
+        // a client, from the perspective of the DNS server. The DNS server
+        // typically sets the RA (recursion available) bit when responding.
         CLIENT_RESPONSE = 6;
 
         // FORWARDER_QUERY is a DNS query message sent from a downstream DNS
@@ -122,6 +138,14 @@ message Message {
         // DNS server performing recursion to a downstream DNS server, from the
         // perspective of the downstream DNS server.
         FORWARDER_RESPONSE = 8;
+
+        // STUB_QUERY is a DNS query message sent from a stub resolver to a DNS
+        // server, from the perspective of the stub resolver.
+        STUB_QUERY = 9;
+
+        // STUB_RESPONSE is a DNS response message sent from a DNS server to a
+        // stub resolver, from the perspective of the stub resolver.
+        STUB_RESPONSE = 10;
     }
 
     // One of the Type values described above.
