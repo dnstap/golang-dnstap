@@ -73,6 +73,10 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
          dnstapProto.Message_FORWARDER_RESPONSE: {
              s.WriteString("F")
          }
+    case dnstapProto.Message_STUB_QUERY,
+         dnstapProto.Message_STUB_RESPONSE: {
+             s.WriteString("S")
+         }
     }
 
     if isQuery {
