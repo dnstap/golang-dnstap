@@ -129,17 +129,21 @@ const (
 	Message_CLIENT_RESPONSE    Message_Type = 6
 	Message_FORWARDER_QUERY    Message_Type = 7
 	Message_FORWARDER_RESPONSE Message_Type = 8
+	Message_STUB_QUERY         Message_Type = 9
+	Message_STUB_RESPONSE      Message_Type = 10
 )
 
 var Message_Type_name = map[int32]string{
-	1: "AUTH_QUERY",
-	2: "AUTH_RESPONSE",
-	3: "RESOLVER_QUERY",
-	4: "RESOLVER_RESPONSE",
-	5: "CLIENT_QUERY",
-	6: "CLIENT_RESPONSE",
-	7: "FORWARDER_QUERY",
-	8: "FORWARDER_RESPONSE",
+	1:  "AUTH_QUERY",
+	2:  "AUTH_RESPONSE",
+	3:  "RESOLVER_QUERY",
+	4:  "RESOLVER_RESPONSE",
+	5:  "CLIENT_QUERY",
+	6:  "CLIENT_RESPONSE",
+	7:  "FORWARDER_QUERY",
+	8:  "FORWARDER_RESPONSE",
+	9:  "STUB_QUERY",
+	10: "STUB_RESPONSE",
 }
 var Message_Type_value = map[string]int32{
 	"AUTH_QUERY":         1,
@@ -150,6 +154,8 @@ var Message_Type_value = map[string]int32{
 	"CLIENT_RESPONSE":    6,
 	"FORWARDER_QUERY":    7,
 	"FORWARDER_RESPONSE": 8,
+	"STUB_QUERY":         9,
+	"STUB_RESPONSE":      10,
 }
 
 func (x Message_Type) Enum() *Message_Type {
@@ -175,6 +181,7 @@ func (x *Message_Type) UnmarshalJSON(data []byte) error {
 type Dnstap struct {
 	Identity         []byte       `protobuf:"bytes,1,opt,name=identity" json:"identity,omitempty"`
 	Version          []byte       `protobuf:"bytes,2,opt,name=version" json:"version,omitempty"`
+	Extra            []byte       `protobuf:"bytes,3,opt,name=extra" json:"extra,omitempty"`
 	Type             *Dnstap_Type `protobuf:"varint,15,req,name=type,enum=dnstap.Dnstap_Type" json:"type,omitempty"`
 	Message          *Message     `protobuf:"bytes,14,opt,name=message" json:"message,omitempty"`
 	XXX_unrecognized []byte       `json:"-"`
@@ -194,6 +201,13 @@ func (m *Dnstap) GetIdentity() []byte {
 func (m *Dnstap) GetVersion() []byte {
 	if m != nil {
 		return m.Version
+	}
+	return nil
+}
+
+func (m *Dnstap) GetExtra() []byte {
+	if m != nil {
+		return m.Extra
 	}
 	return nil
 }
