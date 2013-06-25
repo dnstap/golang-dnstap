@@ -22,6 +22,11 @@ message Dnstap {
     // "version.bind" query.
     optional bytes      version = 2;
 
+    // Extra data for this payload.
+    // This field can be used for adding an arbitrary byte-string annotation to
+    // the payload. No encoding or interpretation is applied or enforced.
+    optional bytes      extra = 3;
+
     // Identifies which field below is filled in.
     enum Type {
         MESSAGE = 1;
