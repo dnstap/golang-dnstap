@@ -83,24 +83,25 @@ message Message {
     // further recursion.
 
     enum Type {
-        // AUTH_QUERY is a DNS query message received from a recursive
-        // server by an authoritative name server, from the perspective of
-        // the authorative name server.
+        // AUTH_QUERY is a DNS query message received from a resolver by an
+        // authoritative name server, from the perspective of the authorative
+        // name server.
         AUTH_QUERY = 1;
 
-        // AUTH_RESPONSE is a DNS response message sent from an
-        // authoritative name server to a recursive server, from the
-        // perspective of the authoritative name server.
+        // AUTH_RESPONSE is a DNS response message sent from an authoritative
+        // name server to a resolver, from the perspective of the authoritative
+        // name server.
         AUTH_RESPONSE = 2;
 
-        // RESOLVER_QUERY is a DNS query message sent from a recursive
-        // server to an authoritative name server, from the perspective of
-        // the recursive server.
+        // RESOLVER_QUERY is a DNS query message sent from a resolver to an
+        // authoritative name server, from the perspective of the resolver.
+        // Resolvers typically clear the RD (recursion desired) bit when
+        // sending queries.
         RESOLVER_QUERY = 3;
 
         // RESOLVER_RESPONSE is a DNS response message received from an
-        // authoritative name server by a recursive server, from the
-        // perspective of the recursive server.
+        // authoritative name server by a resolver, from the perspective of
+        // the resolver.
         RESOLVER_RESPONSE = 4;
 
         // CLIENT_QUERY is a DNS query message sent from a client to a DNS
@@ -113,8 +114,8 @@ message Message {
         CLIENT_QUERY = 5;
 
         // CLIENT_RESPONSE is a DNS response message sent from a DNS server to
-        // a client. The DNS server typically sets the RA (recursion available)
-        // bit when responding.
+        // a client, from the perspective of the DNS server. The DNS server
+        // typically sets the RA (recursion available) bit when responding.
         CLIENT_RESPONSE = 6;
 
         // FORWARDER_QUERY is a DNS query message sent from a downstream DNS
