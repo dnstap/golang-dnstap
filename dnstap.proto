@@ -1,7 +1,7 @@
-// dnstap: flexible, structured event replication format for DNS servers
+// dnstap: flexible, structured event replication format for DNS software
 
 // This file contains the protobuf schemas for the "dnstap" structured event
-// replication format for DNS servers. 
+// replication format for DNS software.
 
 package dnstap;
 
