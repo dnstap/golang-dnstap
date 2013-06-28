@@ -28,6 +28,19 @@ import dnstapProto "github.com/dnstap/golang-dnstap/dnstap.pb"
 
 const quietTimeFormat = "15:04:05"
 
+func textConvertTime(s *bytes.Buffer, secs *uint64, nsecs *uint32) {
+    if secs != nil {
+        s.WriteString(time.Unix(int64(*secs), 0).Format(quietTimeFormat))
+    } else {
+        s.WriteString("??:??:??")
+    }
+    if nsecs != nil {
+        s.WriteString(fmt.Sprintf(".%06d", *nsecs / 1000))
+    } else {
+        s.WriteString(".??????")
+    }
+}
+
 func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     isQuery := false
     printQueryAddress := false
@@ -46,13 +59,9 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     }
 
     if isQuery {
-        t := time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec))
-        s.WriteString(t.Format(quietTimeFormat))
-        s.WriteString(fmt.Sprintf(".%06d", *m.QueryTimeNsec / 1000))
+        textConvertTime(s, m.QueryTimeSec, m.QueryTimeNsec)
     } else {
-        t := time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec))
-        s.WriteString(t.Format(quietTimeFormat))
-        s.WriteString(fmt.Sprintf(".%06d", *m.ResponseTimeNsec / 1000))
+        textConvertTime(s, m.ResponseTimeSec, m.ResponseTimeNsec)
     }
     s.WriteString(" ")
 
