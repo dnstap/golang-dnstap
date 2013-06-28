@@ -41,6 +41,14 @@ func textConvertTime(s *bytes.Buffer, secs *uint64, nsecs *uint32) {
     }
 }
 
+func textConvertIP(s *bytes.Buffer, ip []byte) {
+    if ip != nil {
+        s.WriteString(net.IP(ip).String())
+    } else {
+        s.WriteString("MISSING_ADDRESS")
+    }
+}
+
 func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     isQuery := false
     printQueryAddress := false
@@ -101,13 +109,9 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     }
 
     if printQueryAddress {
-        if m.QueryAddress != nil {
-            s.WriteString(net.IP(m.QueryAddress).String())
-        }
+        textConvertIP(s, m.QueryAddress)
     } else {
-        if m.ResponseAddress != nil {
-            s.WriteString(net.IP(m.ResponseAddress).String())
-        }
+        textConvertIP(s, m.ResponseAddress)
     }
     s.WriteString(" ")
 
