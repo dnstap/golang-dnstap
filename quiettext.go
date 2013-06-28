@@ -104,7 +104,9 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
 
     switch *m.Type {
     case dnstapProto.Message_CLIENT_QUERY,
-         dnstapProto.Message_AUTH_QUERY:
+         dnstapProto.Message_CLIENT_RESPONSE,
+         dnstapProto.Message_AUTH_QUERY,
+         dnstapProto.Message_AUTH_RESPONSE:
             printQueryAddress = true
     }
 
