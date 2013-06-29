@@ -175,49 +175,34 @@ message Message {
     // This is a 16-bit UDP or TCP port number, depending on SocketProtocol.
     optional uint32             response_port = 7;
 
-    // The DNS message ID of the query and/or response message.
-    // This is a 16-bit number.
-    optional uint32             message_id = 8;
-
-    // The wire-format DNS query name. This field is case folded. The query
-    // name appears in its original case as sent or received on the wire in
-    // the question section of the verbatim query or response message.
-    optional bytes              query_name = 9;
-
-    // The DNS query type.
-    optional uint32             query_type = 10;
-
-    // The DNS query class.
-    optional uint32             query_class = 11;
-
     // The time at which the DNS query message was sent or received, depending
     // on whether this is an AUTH_QUERY, RESOLVER_QUERY, or CLIENT_QUERY.
     // This is the number of seconds since the UNIX epoch.
-    optional uint64             query_time_sec = 12;
+    optional uint64             query_time_sec = 8;
 
     // The time at which the DNS query message was sent or received.
     // This is the seconds fraction, expressed as a count of nanoseconds.
-    optional fixed32            query_time_nsec = 13;
+    optional fixed32            query_time_nsec = 9;
 
     // The initiator's original wire-format DNS query message, verbatim.
-    optional bytes              query_message = 14;
+    optional bytes              query_message = 10;
 
     // The "zone" or "bailiwick" pertaining to the DNS query message. This
     // field is case folded.
-    optional bytes              query_zone = 15;
+    optional bytes              query_zone = 11;
 
     // The time at which the DNS response message was sent or received,
     // depending on whether this is an AUTH_RESPONSE, RESOLVER_RESPONSE, or
     // CLIENT_RESPONSE.
     // This is the number of seconds since the UNIX epoch.
-    optional uint64             response_time_sec = 16;
+    optional uint64             response_time_sec = 12;
 
     // The time at which the DNS response message was sent or received.
     // This is the seconds fraction, expressed as a count of nanoseconds.
-    optional fixed32            response_time_nsec = 17;
+    optional fixed32            response_time_nsec = 13;
 
     // The responder's original wire-format DNS response message, verbatim.
-    optional bytes              response_message = 18;
+    optional bytes              response_message = 14;
 }
 
 // All fields except for 'type' in the Message schema are optional.
