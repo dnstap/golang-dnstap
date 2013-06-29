@@ -187,8 +187,8 @@ message Message {
     // The initiator's original wire-format DNS query message, verbatim.
     optional bytes              query_message = 10;
 
-    // The "zone" or "bailiwick" pertaining to the DNS query message. This
-    // field is case folded.
+    // The "zone" or "bailiwick" pertaining to the DNS query message.
+    // This is a wire-format DNS domain name.
     optional bytes              query_zone = 11;
 
     // The time at which the DNS response message was sent or received,
