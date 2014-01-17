@@ -24,7 +24,7 @@ import "time"
 
 import "github.com/miekg/dns"
 
-import dnstapProto "github.com/dnstap/golang-dnstap/dnstap.pb"
+import dnstapProto "./dnstap.pb"
 
 const quietTimeFormat = "15:04:05"
 

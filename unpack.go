@@ -22,7 +22,7 @@ import "log"
 
 import "code.google.com/p/goprotobuf/proto"
 
-import dnstapProto "github.com/dnstap/golang-dnstap/dnstap.pb"
+import dnstapProto "./dnstap.pb"
 
 func Unpack(buf []byte) (dt *dnstapProto.Dnstap, ok bool) {
     if len(buf) <= 6 {
