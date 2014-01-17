@@ -24,8 +24,6 @@ import "time"
 
 import "github.com/miekg/dns"
 
-import dnstapProto "./dnstap.pb"
-
 const quietTimeFormat = "15:04:05"
 
 func textConvertTime(s *bytes.Buffer, secs *uint64, nsecs *uint32) {
@@ -49,20 +47,20 @@ func textConvertIP(s *bytes.Buffer, ip []byte) {
     }
 }
 
-func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
+func textConvertMessage(m *Message, s *bytes.Buffer) {
     isQuery := false
     printQueryAddress := false
 
     switch *m.Type {
-    case dnstapProto.Message_CLIENT_QUERY,
-         dnstapProto.Message_RESOLVER_QUERY,
-         dnstapProto.Message_AUTH_QUERY,
-         dnstapProto.Message_FORWARDER_QUERY:
+    case Message_CLIENT_QUERY,
+         Message_RESOLVER_QUERY,
+         Message_AUTH_QUERY,
+         Message_FORWARDER_QUERY:
             isQuery = true
-    case dnstapProto.Message_CLIENT_RESPONSE,
-         dnstapProto.Message_RESOLVER_RESPONSE,
-         dnstapProto.Message_AUTH_RESPONSE,
-         dnstapProto.Message_FORWARDER_RESPONSE:
+    case Message_CLIENT_RESPONSE,
+         Message_RESOLVER_RESPONSE,
+         Message_AUTH_RESPONSE,
+         Message_FORWARDER_RESPONSE:
             isQuery = false
     }
 
@@ -74,24 +72,24 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     s.WriteString(" ")
 
     switch *m.Type {
-    case dnstapProto.Message_CLIENT_QUERY,
-         dnstapProto.Message_CLIENT_RESPONSE: {
+    case Message_CLIENT_QUERY,
+         Message_CLIENT_RESPONSE: {
             s.WriteString("C")
          }
-    case dnstapProto.Message_RESOLVER_QUERY,
-         dnstapProto.Message_RESOLVER_RESPONSE: {
+    case Message_RESOLVER_QUERY,
+         Message_RESOLVER_RESPONSE: {
              s.WriteString("R")
          }
-    case dnstapProto.Message_AUTH_QUERY,
-         dnstapProto.Message_AUTH_RESPONSE: {
+    case Message_AUTH_QUERY,
+         Message_AUTH_RESPONSE: {
              s.WriteString("A")
          }
-    case dnstapProto.Message_FORWARDER_QUERY,
-         dnstapProto.Message_FORWARDER_RESPONSE: {
+    case Message_FORWARDER_QUERY,
+         Message_FORWARDER_RESPONSE: {
              s.WriteString("F")
          }
-    case dnstapProto.Message_STUB_QUERY,
-         dnstapProto.Message_STUB_RESPONSE: {
+    case Message_STUB_QUERY,
+         Message_STUB_RESPONSE: {
              s.WriteString("S")
          }
     }
@@ -103,10 +101,10 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     }
 
     switch *m.Type {
-    case dnstapProto.Message_CLIENT_QUERY,
-         dnstapProto.Message_CLIENT_RESPONSE,
-         dnstapProto.Message_AUTH_QUERY,
-         dnstapProto.Message_AUTH_RESPONSE:
+    case Message_CLIENT_QUERY,
+         Message_CLIENT_RESPONSE,
+         Message_AUTH_QUERY,
+         Message_AUTH_RESPONSE:
             printQueryAddress = true
     }
 
@@ -122,45 +120,33 @@ func textConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     }
     s.WriteString(" ")
 
+    var err error
+    msg := new(dns.Msg)
     if isQuery {
         s.WriteString(strconv.Itoa(len(m.QueryMessage)))
         s.WriteString("b ")
+        err = msg.Unpack(m.QueryMessage)
     } else {
         s.WriteString(strconv.Itoa(len(m.ResponseMessage)))
         s.WriteString("b ")
+        err = msg.Unpack(m.ResponseMessage)
     }
 
-    if m.QueryName != nil {
-        name, _, err := dns.UnpackDomainName(m.QueryName, 0)
-        if err != nil {
-            s.WriteString("X ")
-        }
-        s.WriteString(strconv.Quote(name))
-    } else {
+    if err != nil {
         s.WriteString("X ")
-    }
-    s.WriteString(" ")
-
-    if m.QueryClass != nil {
-        s.WriteString(dns.Class(*m.QueryClass).String())
     } else {
-        s.WriteString("X ")
-    }
-    s.WriteString(" ")
-
-    if m.QueryType != nil {
-        s.WriteString(dns.Type(*m.QueryType).String())
-    } else {
-        s.WriteString("X")
+        s.WriteString(msg.Question[0].Name + " ")
+        s.WriteString(dns.Class(msg.Question[0].Qclass).String() + " ")
+        s.WriteString(dns.Type(msg.Question[0].Qtype).String())
     }
 
     s.WriteString("\n")
 }
 
-func textConvertPayload(dt *dnstapProto.Dnstap) (out []byte) {
+func textConvertPayload(dt *Dnstap) (out []byte) {
     var s bytes.Buffer
 
-    if *dt.Type == dnstapProto.Dnstap_MESSAGE {
+    if *dt.Type == Dnstap_MESSAGE {
         textConvertMessage(dt.Message, &s)
     }
 

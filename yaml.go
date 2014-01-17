@@ -25,11 +25,9 @@ import "time"
 
 import "github.com/miekg/dns"
 
-import dnstapProto "./dnstap.pb"
-
 const yamlTimeFormat = "2006-01-02 15:04:05.999999999"
 
-func yamlConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
+func yamlConvertMessage(m *Message, s *bytes.Buffer) {
     s.WriteString(fmt.Sprint("  type: ", m.Type, "\n"))
 
     if m.QueryTimeSec != nil && m.QueryTimeNsec != nil {
@@ -75,22 +73,6 @@ func yamlConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
         }
     }
 
-    if m.QueryName != nil {
-        name, _, err := dns.UnpackDomainName(m.QueryName, 0)
-        if err != nil {
-            s.WriteString("  # query_name: parse failed\n")
-        }
-        s.WriteString(fmt.Sprint("  query_name: ", strconv.Quote(name), "\n"))
-    }
-
-    if m.QueryClass != nil {
-        s.WriteString(fmt.Sprint("  query_class: ", dns.Class(*m.QueryClass), "\n"))
-    }
-
-    if m.QueryType != nil {
-        s.WriteString(fmt.Sprint("  query_type: ", dns.Type(*m.QueryType), "\n"))
-    }
-
     if m.QueryMessage != nil {
         msg := new(dns.Msg)
         err := msg.Unpack(m.QueryMessage)
@@ -114,7 +96,7 @@ func yamlConvertMessage(m *dnstapProto.Message, s *bytes.Buffer) {
     s.WriteString("---\n")
 }
 
-func yamlConvertPayload(dt *dnstapProto.Dnstap) (out []byte) {
+func yamlConvertPayload(dt *Dnstap) (out []byte) {
     var s bytes.Buffer
 
     s.WriteString(fmt.Sprint("type: ", dt.Type, "\n"))
@@ -124,7 +106,7 @@ func yamlConvertPayload(dt *dnstapProto.Dnstap) (out []byte) {
     if dt.Version != nil {
         s.WriteString(fmt.Sprint("version: ", strconv.Quote(string(dt.Version)), "\n"))
     }
-    if *dt.Type == dnstapProto.Dnstap_MESSAGE {
+    if *dt.Type == Dnstap_MESSAGE {
         s.WriteString("message:\n")
         yamlConvertMessage(dt.Message, &s)
     }

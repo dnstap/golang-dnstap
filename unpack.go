@@ -22,9 +22,7 @@ import "log"
 
 import "code.google.com/p/goprotobuf/proto"
 
-import dnstapProto "./dnstap.pb"
-
-func Unpack(buf []byte) (dt *dnstapProto.Dnstap, ok bool) {
+func Unpack(buf []byte) (dt *Dnstap, ok bool) {
     if len(buf) <= 6 {
         return nil, false
     }
@@ -46,7 +44,7 @@ func Unpack(buf []byte) (dt *dnstapProto.Dnstap, ok bool) {
     }
 
     /* remaining bytes */
-    dt = &dnstapProto.Dnstap{}
+    dt = &Dnstap{}
     err = proto.Unmarshal(buf[6:len(buf)], dt)
     if err != nil {
         log.Fatalf("Unpack: proto.Unmarshal() failed: %s\n", err)
