@@ -135,7 +135,7 @@ func textConvertMessage(m *Message, s *bytes.Buffer) {
     if err != nil {
         s.WriteString("X ")
     } else {
-        s.WriteString(msg.Question[0].Name + " ")
+        s.WriteString("\"" + msg.Question[0].Name + "\" ")
         s.WriteString(dns.Class(msg.Question[0].Qclass).String() + " ")
         s.WriteString(dns.Type(msg.Question[0].Qtype).String())
     }
