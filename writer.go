@@ -37,13 +37,12 @@ func NewWriter(output io.Writer) (w *Writer) {
 func NewWriterFromFilename(fname string) (w *Writer, e error) {
     if fname == "" || fname == "-" {
         return NewWriter(os.Stdout), nil
-    } else {
-        output, err := os.Create(fname)
-        if err != nil {
-            return nil, err
-        }
-        return NewWriter(output), nil
     }
+    output, err := os.Create(fname)
+    if err != nil {
+        return nil, err
+    }
+    return NewWriter(output), nil
 }
 
 func (w *Writer) Write(channel chan []byte) {

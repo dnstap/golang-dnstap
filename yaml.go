@@ -135,7 +135,6 @@ func YamlConvert(buf []byte) (out []byte, ok bool) {
     dt, ok := Unpack(buf)
     if ok {
         return yamlConvertPayload(dt), true
-    } else {
-        return nil, false
     }
+    return nil, false
 }

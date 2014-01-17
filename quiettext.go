@@ -171,7 +171,6 @@ func QuietTextConvert(buf []byte) (out []byte, ok bool) {
     dt, ok := Unpack(buf)
     if ok {
         return textConvertPayload(dt), true
-    } else {
-        return nil, false
     }
+    return nil, false
 }
