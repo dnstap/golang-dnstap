@@ -1,4 +1,9 @@
 .deps/
 .dirstamp
 .libs/
-*.pb-c.*
+*.pb-c.c
+*.pb-c.h
+*.pb.cc
+*.pb.h
+*.pb.go
+*_pb2.py
