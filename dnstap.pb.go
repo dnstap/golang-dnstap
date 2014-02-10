@@ -2,6 +2,16 @@
 // source: dnstap.proto
 // DO NOT EDIT!
 
+/*
+Package dnstap is a generated protocol buffer package.
+
+It is generated from these files:
+	dnstap.proto
+
+It has these top-level messages:
+	Dnstap
+	Message
+*/
 package dnstap
 
 import proto "code.google.com/p/goprotobuf/proto"
@@ -39,9 +49,6 @@ func (x SocketFamily) Enum() *SocketFamily {
 func (x SocketFamily) String() string {
 	return proto.EnumName(SocketFamily_name, int32(x))
 }
-func (x SocketFamily) MarshalJSON() ([]byte, error) {
-	return json.Marshal(x.String())
-}
 func (x *SocketFamily) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(SocketFamily_value, data, "SocketFamily")
 	if err != nil {
@@ -77,9 +84,6 @@ func (x SocketProtocol) Enum() *SocketProtocol {
 func (x SocketProtocol) String() string {
 	return proto.EnumName(SocketProtocol_name, int32(x))
 }
-func (x SocketProtocol) MarshalJSON() ([]byte, error) {
-	return json.Marshal(x.String())
-}
 func (x *SocketProtocol) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(SocketProtocol_value, data, "SocketProtocol")
 	if err != nil {
@@ -110,9 +114,6 @@ func (x Dnstap_Type) Enum() *Dnstap_Type {
 }
 func (x Dnstap_Type) String() string {
 	return proto.EnumName(Dnstap_Type_name, int32(x))
-}
-func (x Dnstap_Type) MarshalJSON() ([]byte, error) {
-	return json.Marshal(x.String())
 }
 func (x *Dnstap_Type) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(Dnstap_Type_value, data, "Dnstap_Type")
@@ -205,9 +206,6 @@ func (x Message_Type) Enum() *Message_Type {
 func (x Message_Type) String() string {
 	return proto.EnumName(Message_Type_name, int32(x))
 }
-func (x Message_Type) MarshalJSON() ([]byte, error) {
-	return json.Marshal(x.String())
-}
 func (x *Message_Type) UnmarshalJSON(data []byte) error {
 	value, err := proto.UnmarshalJSONEnum(Message_Type_value, data, "Message_Type")
 	if err != nil {
@@ -271,7 +269,7 @@ func (m *Dnstap) GetType() Dnstap_Type {
 	if m != nil && m.Type != nil {
 		return *m.Type
 	}
-	return 0
+	return Dnstap_MESSAGE
 }
 
 func (m *Dnstap) GetMessage() *Message {
@@ -338,21 +336,21 @@ func (m *Message) GetType() Message_Type {
 	if m != nil && m.Type != nil {
 		return *m.Type
 	}
-	return 0
+	return Message_AUTH_QUERY
 }
 
 func (m *Message) GetSocketFamily() SocketFamily {
 	if m != nil && m.SocketFamily != nil {
 		return *m.SocketFamily
 	}
-	return 0
+	return SocketFamily_INET
 }
 
 func (m *Message) GetSocketProtocol() SocketProtocol {
 	if m != nil && m.SocketProtocol != nil {
 		return *m.SocketProtocol
 	}
-	return 0
+	return SocketProtocol_UDP
 }
 
 func (m *Message) GetQueryAddress() []byte {
