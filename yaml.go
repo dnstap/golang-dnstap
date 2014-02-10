@@ -24,6 +24,7 @@ import "strings"
 import "time"
 
 import "github.com/miekg/dns"
+import "code.google.com/p/goprotobuf/proto"
 
 const yamlTimeFormat = "2006-01-02 15:04:05.999999999"
 
@@ -114,9 +115,10 @@ func yamlConvertPayload(dt *Dnstap) (out []byte) {
 }
 
 func YamlConvert(buf []byte) (out []byte, ok bool) {
-    dt, ok := Unpack(buf)
-    if ok {
-        return yamlConvertPayload(dt), true
+    dt := &Dnstap{}
+    err := proto.Unmarshal(buf, dt)
+    if err != nil {
+        return nil, false
     }
-    return nil, false
+    return yamlConvertPayload(dt), true
 }

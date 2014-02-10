@@ -40,15 +40,20 @@ func NewSockReaderFromPath(socketPath string) (s *SockReader, err error) {
     return NewSockReader(listen), nil
 }
 
-func (s *SockReader) Read(output chan []byte) {
+func (s *SockReader) ReadInto(output chan []byte) {
     for {
         conn, err := s.listen.Accept()
         if err != nil {
             log.Printf("listen.Accept() failed: %s\n", err)
             continue
         }
-        r := NewReader(conn)
+        r, err := NewReader(conn)
+        if err != nil {
+            log.Printf("NewReader() failed: %s\n", err)
+            continue
+        }
+        log.Printf("accepted a socket connection\n")
         r.Convert = s.Convert
-        go r.Read(output)
+        go r.ReadInto(output)
     }
 }

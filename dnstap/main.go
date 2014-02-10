@@ -105,11 +105,11 @@ func main() {
     go w.Write(outputChannel)
 
     if r != nil {
-        go r.Read(outputChannel)
+        go r.ReadInto(outputChannel)
         r.Wait()
         close(outputChannel)
         w.Wait()
     } else if s != nil {
-        s.Read(outputChannel)
+        s.ReadInto(outputChannel)
     }
 }
