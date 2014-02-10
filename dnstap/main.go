@@ -30,7 +30,7 @@ const (
 
 var (
     flagReadFile    = flag.String("r", "", "read dnstap payloads from file")
-    flagReadSock    = flag.String("s", "", "read dnstap payloads from unix socket")
+    flagReadSock    = flag.String("u", "", "read dnstap payloads from unix socket")
     flagWriteFile   = flag.String("w", "", "write output to file")
     flagQuietText   = flag.Bool("q", false, "use quiet text output")
     flagYamlText    = flag.Bool("y", false, "use verbose YAML output")
@@ -57,11 +57,11 @@ func main() {
         unbuffered = true
     }
     if *flagReadFile == "" && *flagReadSock == "" {
-        fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs, specify -r or -s\n")
+        fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs, specify -r or -u\n")
         os.Exit(1)
     }
     if *flagReadFile != "" && *flagReadSock != "" {
-        fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r or -n\n")
+        fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r or -u\n")
         os.Exit(1)
     }
 
