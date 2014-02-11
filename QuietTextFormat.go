@@ -23,7 +23,6 @@ import "strconv"
 import "time"
 
 import "github.com/miekg/dns"
-import "code.google.com/p/goprotobuf/proto"
 
 const quietTimeFormat = "15:04:05"
 
@@ -144,21 +143,13 @@ func textConvertMessage(m *Message, s *bytes.Buffer) {
     s.WriteString("\n")
 }
 
-func textConvertPayload(dt *Dnstap) (out []byte) {
+func TextFormat(dt *Dnstap) (out []byte, ok bool) {
     var s bytes.Buffer
 
     if *dt.Type == Dnstap_MESSAGE {
         textConvertMessage(dt.Message, &s)
+        return s.Bytes(), true
     }
 
-    return s.Bytes()
-}
-
-func QuietTextConvert(buf []byte) (out []byte, ok bool) {
-    dt := &Dnstap{}
-    err := proto.Unmarshal(buf, dt)
-    if err != nil {
-        return nil, false
-    }
-    return textConvertPayload(dt), true
+    return nil, false
 }

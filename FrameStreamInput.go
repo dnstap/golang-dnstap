@@ -16,64 +16,57 @@
 
 package dnstap
 
+import "fmt"
 import "log"
 import "io"
 import "os"
 
 import framestream "github.com/farsightsec/golang-framestream"
 
-var FSContentType = []byte("protobuf:dnstap.Dnstap")
-
-type Reader struct {
-    Convert     func([]byte) ([]byte, bool)
-    wait        chan int
-    fsinput     *framestream.Decoder
+type FrameStreamInput struct {
+    wait        chan bool
+    decoder     *framestream.Decoder
 }
 
-func NewReader(input io.Reader) (r *Reader, err error) {
-    r = new(Reader)
+func NewFrameStreamInput(r io.Reader) (input *FrameStreamInput, err error) {
+    input = new(FrameStreamInput)
     decoderOptions := framestream.DecoderOptions{
         ContentType: FSContentType,
     }
-    r.fsinput, err = framestream.NewDecoder(input, &decoderOptions)
+    input.decoder, err = framestream.NewDecoder(r, &decoderOptions)
     if err != nil {
         return
     }
-    r.wait = make(chan int)
+    input.wait = make(chan bool)
     return
 }
 
-func NewReaderFromFilename(fname string) (r *Reader, err error) {
-    input, err := os.Open(fname)
+func NewFrameStreamInputFromFilename(fname string) (input *FrameStreamInput, err error) {
+    file, err := os.Open(fname)
     if err != nil {
         return nil, err
     }
-    r, err = NewReader(input)
+    input, err = NewFrameStreamInput(file)
     return
 }
 
-func (r *Reader) ReadInto(output chan []byte) {
+func (input *FrameStreamInput) ReadInto(output chan []byte) {
     for {
-        buf, err := r.fsinput.Decode()
+        buf, err := input.decoder.Decode()
         if err != nil {
             if err != io.EOF {
-                log.Printf("Read() failed: %s\n", err)
+                log.Printf("framestream.Decoder.Decode() failed: %s\n", err)
             }
             break
         }
-        if r.Convert != nil {
-            if newbuf, ok := r.Convert(buf); ok {
-                output <- newbuf
-            }
-        } else {
-            newbuf := make([]byte, len(buf))
-            copy(newbuf, buf)
-            output <- buf
-        }
+        fmt.Fprintf(os.Stderr, "dnstap.FrameStreamInput.ReadInto(): got buf of length %d\n", len(buf))
+        newbuf := make([]byte, len(buf))
+        copy(newbuf, buf)
+        output <- newbuf
     }
-    close(r.wait)
+    close(input.wait)
 }
 
-func (r *Reader) Wait() {
-    <-r.wait
+func (input *FrameStreamInput) Wait() {
+    <-input.wait
 }

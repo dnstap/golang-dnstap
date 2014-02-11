@@ -24,7 +24,6 @@ import "strings"
 import "time"
 
 import "github.com/miekg/dns"
-import "code.google.com/p/goprotobuf/proto"
 
 const yamlTimeFormat = "2006-01-02 15:04:05.999999999"
 
@@ -97,7 +96,7 @@ func yamlConvertMessage(m *Message, s *bytes.Buffer) {
     s.WriteString("---\n")
 }
 
-func yamlConvertPayload(dt *Dnstap) (out []byte) {
+func YamlFormat(dt *Dnstap) (out []byte, ok bool) {
     var s bytes.Buffer
 
     s.WriteString(fmt.Sprint("type: ", dt.Type, "\n"))
@@ -111,14 +110,5 @@ func yamlConvertPayload(dt *Dnstap) (out []byte) {
         s.WriteString("message:\n")
         yamlConvertMessage(dt.Message, &s)
     }
-    return s.Bytes()
-}
-
-func YamlConvert(buf []byte) (out []byte, ok bool) {
-    dt := &Dnstap{}
-    err := proto.Unmarshal(buf, dt)
-    if err != nil {
-        return nil, false
-    }
-    return yamlConvertPayload(dt), true
+    return s.Bytes(), true
 }
