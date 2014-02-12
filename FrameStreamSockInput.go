@@ -52,7 +52,7 @@ func (input *FrameStreamSockInput) ReadInto(output chan []byte) {
             log.Printf("dnstap.NewFrameStreamInput() failed: %s\n", err)
             continue
         }
-        log.Printf("dnstap.FrameStreamSockInput.ReadInto(): accepted a socket connection\n")
+        log.Printf("dnstap.FrameStreamSockInput: accepted a socket connection\n")
         go i.ReadInto(output)
     }
 }

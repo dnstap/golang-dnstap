@@ -16,7 +16,6 @@
 
 package dnstap
 
-import "fmt"
 import "log"
 import "io"
 import "os"
@@ -59,7 +58,6 @@ func (input *FrameStreamInput) ReadInto(output chan []byte) {
             }
             break
         }
-        fmt.Fprintf(os.Stderr, "dnstap.FrameStreamInput.ReadInto(): got buf of length %d\n", len(buf))
         newbuf := make([]byte, len(buf))
         copy(newbuf, buf)
         output <- newbuf
