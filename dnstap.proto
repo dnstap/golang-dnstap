@@ -243,7 +243,6 @@ message Message {
 
 // RESOLVER_QUERY:
 //      socket_family, socket_protocol
-//      query_name, query_type, query_class
 //      query_message
 //      query_time_sec, query_time_nsec
 //      query_zone
@@ -251,7 +250,6 @@ message Message {
 
 // RESOLVER_RESPONSE:
 //      socket_family, socket_protocol
-//      query_name, query_type, query_class
 //      query_time_sec, query_time_nsec
 //      query_zone
 //      response_address, response_port
