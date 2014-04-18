@@ -7,3 +7,4 @@
 *.pb.h
 *.pb.go
 *_pb2.py
+*_pb2.pyc
