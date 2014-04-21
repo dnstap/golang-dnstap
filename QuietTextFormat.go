@@ -55,12 +55,14 @@ func textConvertMessage(m *Message, s *bytes.Buffer) {
     case Message_CLIENT_QUERY,
          Message_RESOLVER_QUERY,
          Message_AUTH_QUERY,
-         Message_FORWARDER_QUERY:
+         Message_FORWARDER_QUERY,
+         Message_TOOL_QUERY:
             isQuery = true
     case Message_CLIENT_RESPONSE,
          Message_RESOLVER_RESPONSE,
          Message_AUTH_RESPONSE,
-         Message_FORWARDER_RESPONSE:
+         Message_FORWARDER_RESPONSE,
+         Message_TOOL_RESPONSE:
             isQuery = false
     default:
             s.WriteString("[unhandled Message.Type]\n")
@@ -94,6 +96,10 @@ func textConvertMessage(m *Message, s *bytes.Buffer) {
     case Message_STUB_QUERY,
          Message_STUB_RESPONSE: {
              s.WriteString("S")
+         }
+    case Message_TOOL_QUERY,
+         Message_TOOL_RESPONSE: {
+             s.WriteString("T")
          }
     }
 
