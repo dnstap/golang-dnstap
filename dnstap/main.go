@@ -48,6 +48,8 @@ Quiet text output format mnemonics:
     FR: FORWARDER_RESPONSE
     SQ: STUB_QUERY
     SR: STUB_RESPONSE
+    TQ: TOOL_QUERY
+    TR: TOOL_RESPONSE
 `)
 }
 
