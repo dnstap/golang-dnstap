@@ -171,6 +171,12 @@ const (
 	// STUB_RESPONSE is a DNS response message sent from a DNS server to a
 	// stub resolver, from the perspective of the stub resolver.
 	Message_STUB_RESPONSE Message_Type = 10
+	// TOOL_QUERY is a DNS query message sent from a DNS software tool to a
+	// DNS server, from the perspective of the tool.
+	Message_TOOL_QUERY Message_Type = 11
+	// TOOL_RESPONSE is a DNS response message received by a DNS software
+	// tool from a DNS server, from the perspective of the tool.
+	Message_TOOL_RESPONSE Message_Type = 12
 )
 
 var Message_Type_name = map[int32]string{
@@ -184,6 +190,8 @@ var Message_Type_name = map[int32]string{
 	8:  "FORWARDER_RESPONSE",
 	9:  "STUB_QUERY",
 	10: "STUB_RESPONSE",
+	11: "TOOL_QUERY",
+	12: "TOOL_RESPONSE",
 }
 var Message_Type_value = map[string]int32{
 	"AUTH_QUERY":         1,
@@ -196,6 +204,8 @@ var Message_Type_value = map[string]int32{
 	"FORWARDER_RESPONSE": 8,
 	"STUB_QUERY":         9,
 	"STUB_RESPONSE":      10,
+	"TOOL_QUERY":         11,
+	"TOOL_RESPONSE":      12,
 }
 
 func (x Message_Type) Enum() *Message_Type {
