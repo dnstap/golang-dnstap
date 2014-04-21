@@ -157,6 +157,14 @@ message Message {
         // STUB_RESPONSE is a DNS response message sent from a DNS server to a
         // stub resolver, from the perspective of the stub resolver.
         STUB_RESPONSE = 10;
+
+        // TOOL_QUERY is a DNS query message sent from a DNS software tool to a
+        // DNS server, from the perspective of the tool.
+        TOOL_QUERY = 11;
+
+        // TOOL_RESPONSE is a DNS response message received by a DNS software
+        // tool from a DNS server, from the perspective of the tool.
+        TOOL_RESPONSE = 12;
     }
 
     // One of the Type values described above.
@@ -235,7 +243,6 @@ message Message {
 
 // RESOLVER_QUERY:
 //      socket_family, socket_protocol
-//      query_name, query_type, query_class
 //      query_message
 //      query_time_sec, query_time_nsec
 //      query_zone
@@ -243,7 +250,6 @@ message Message {
 
 // RESOLVER_RESPONSE:
 //      socket_family, socket_protocol
-//      query_name, query_type, query_class
 //      query_time_sec, query_time_nsec
 //      query_zone
 //      response_address, response_port
