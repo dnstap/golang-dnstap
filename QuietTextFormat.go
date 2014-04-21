@@ -62,6 +62,9 @@ func textConvertMessage(m *Message, s *bytes.Buffer) {
          Message_AUTH_RESPONSE,
          Message_FORWARDER_RESPONSE:
             isQuery = false
+    default:
+            s.WriteString("[unhandled Message.Type]\n")
+            return
     }
 
     if isQuery {
