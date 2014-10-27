@@ -27,7 +27,7 @@ import dnstap "github.com/dnstap/golang-dnstap"
 
 var (
     flagReadFile    = flag.String("r", "", "read dnstap payloads from file")
-    flagReadSock    = flag.String("u", "", "read dnstap payloads from unix socket")
+    //flagReadSock    = flag.String("u", "", "read dnstap payloads from unix socket")
     flagWriteFile   = flag.String("w", "-", "write output to file")
     flagQuietText   = flag.Bool("q", false, "use quiet text output")
     flagYamlText    = flag.Bool("y", false, "use verbose YAML output")
@@ -64,19 +64,23 @@ func main() {
 
     // Handle command-line arguments.
     flag.Parse()
+    /*
     if *flagReadFile == "" && *flagReadSock == "" {
         fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
         os.Exit(1)
     }
+    */
     if *flagWriteFile == "-" {
         if *flagQuietText == false && *flagYamlText == false {
             *flagQuietText = true
         }
     }
+    /*
     if *flagReadFile != "" && *flagReadSock != "" {
         fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r or -u.\n")
         os.Exit(1)
     }
+    */
 
     // Open the output and start the output loop.
     if *flagQuietText {
@@ -110,7 +114,7 @@ func main() {
             os.Exit(1)
         }
         fmt.Fprintf(os.Stderr, "dnstap: opened input file %s\n", *flagReadFile)
-    } else if *flagReadSock != "" {
+    } /* else if *flagReadSock != "" {
         i, err = dnstap.NewFrameStreamSockInputFromPath(*flagReadSock)
         if err != nil {
             fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket: %s\n", err)
@@ -118,6 +122,7 @@ func main() {
         }
         fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", *flagReadSock)
     }
+    */
     go i.ReadInto(o.GetOutputChannel())
 
     // Wait for input loop to finish.
