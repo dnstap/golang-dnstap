@@ -23,7 +23,7 @@ import "os"
 import "os/signal"
 import "runtime"
 
-import dnstap "github.com/dnstap/golang-dnstap"
+import dnstap "github.com/fastly/dnstap"
 
 var (
     flagReadFile    = flag.String("r", "", "read dnstap payloads from file")
