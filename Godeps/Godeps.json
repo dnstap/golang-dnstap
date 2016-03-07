@@ -1,0 +1,18 @@
+{
+	"ImportPath": "github.com/fastly/dnstap",
+	"GoVersion": "go1.6",
+	"Deps": [
+		{
+			"ImportPath": "github.com/farsightsec/golang-framestream",
+			"Rev": "f1c3d3513ad00064a8572dbca0ba745368f6f410"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "c75fbf01dc6cb73649c4cd4326182c3e44aa9dbb"
+		},
+		{
+			"ImportPath": "github.com/miekg/dns",
+			"Rev": "4adf880b0237527fe9e86701c412d6906e5fcf9c"
+		}
+	]
+}
