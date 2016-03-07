@@ -10,3 +10,7 @@ include $(GOPATH)/Makefile.project
 
 bin/%: build_data
 	go install $(NAME)
+
+jenkins: deb
+
+post-install: jenkins-git-tag
