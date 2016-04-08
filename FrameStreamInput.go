@@ -27,10 +27,11 @@ type FrameStreamInput struct {
     decoder     *framestream.Decoder
 }
 
-func NewFrameStreamInput(r io.Reader) (input *FrameStreamInput, err error) {
+func NewFrameStreamInput(r io.ReadWriter, bi bool) (input *FrameStreamInput, err error) {
     input = new(FrameStreamInput)
     decoderOptions := framestream.DecoderOptions{
         ContentType: FSContentType,
+        Bidirectional: bi,
     }
     input.decoder, err = framestream.NewDecoder(r, &decoderOptions)
     if err != nil {
@@ -45,7 +46,7 @@ func NewFrameStreamInputFromFilename(fname string) (input *FrameStreamInput, err
     if err != nil {
         return nil, err
     }
-    input, err = NewFrameStreamInput(file)
+    input, err = NewFrameStreamInput(file, false)
     return
 }
 
