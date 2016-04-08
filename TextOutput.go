@@ -21,7 +21,7 @@ import "io"
 import "log"
 import "os"
 
-import "code.google.com/p/goprotobuf/proto"
+import "github.com/golang/protobuf/proto"
 
 type TextFormatFunc func(*Dnstap) ([]byte, bool)
 
