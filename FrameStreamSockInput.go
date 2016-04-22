@@ -47,7 +47,7 @@ func (input *FrameStreamSockInput) ReadInto(output chan []byte) {
             log.Printf("net.Listener.Accept() failed: %s\n", err)
             continue
         }
-        i, err := NewFrameStreamInput(conn)
+        i, err := NewFrameStreamInput(conn, true)
         if err != nil {
             log.Printf("dnstap.NewFrameStreamInput() failed: %s\n", err)
             continue
