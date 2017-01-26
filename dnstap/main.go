@@ -22,8 +22,9 @@ import "log"
 import "os"
 import "os/signal"
 import "runtime"
+import "syscall"
 
-import dnstap "github.com/dnstap/golang-dnstap"
+import "golang-dnstap"
 
 var (
     flagReadFile    = flag.String("r", "", "read dnstap payloads from file")
@@ -64,18 +65,18 @@ func main() {
 
     // Handle command-line arguments.
     flag.Parse()
-    
+
     if *flagReadFile == "" && *flagReadSock == "" {
         fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
         os.Exit(1)
     }
-    
+
     if *flagWriteFile == "-" {
         if *flagQuietText == false && *flagYamlText == false {
             *flagQuietText = true
         }
     }
-    
+
     if *flagReadFile != "" && *flagReadSock != "" {
         fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r or -u.\n")
         os.Exit(1)
@@ -95,13 +96,18 @@ func main() {
     }
     go o.RunOutputLoop()
 
-    // Handle SIGINT.
+    // Handle SIGINT and SIGHUP
     c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
+    signal.Notify(c, os.Interrupt, syscall.SIGHUP)
     go func(){
-        for _ = range c {
-            o.Close()
-            os.Exit(0)
+        for sig := range c {
+            // Reopen the output file if HUP signal
+            if sig == syscall.SIGHUP {
+                o.Reopen()
+            } else {
+                o.Close()
+                os.Exit(0)
+            }
         }
     }()
 

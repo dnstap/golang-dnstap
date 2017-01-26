@@ -70,3 +70,7 @@ func (o *FrameStreamOutput) Close() {
     o.enc.Flush()
     o.enc.Close()
 }
+
+func (o *FrameStreamOutput) Reopen() {
+    return
+}
