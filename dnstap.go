@@ -29,4 +29,5 @@ type Output interface {
     GetOutputChannel() chan []byte
     RunOutputLoop()
     Close()
+    Reopen()
 }

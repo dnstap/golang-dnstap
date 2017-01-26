@@ -16,12 +16,10 @@
 
 package dnstap
 
-import "bufio"
-import "io"
 import "log"
-import "os"
 
 import "github.com/golang/protobuf/proto"
+import "github.com/dmccombs/reopen"
 
 type TextFormatFunc func(*Dnstap) ([]byte, bool)
 
@@ -29,23 +27,31 @@ type TextOutput struct {
     format          TextFormatFunc
     outputChannel   chan []byte
     wait            chan bool
-    writer          *bufio.Writer
+    writer          reopen.Writer
 }
 
-func NewTextOutput(writer io.Writer, format TextFormatFunc) (o *TextOutput) {
+func NewTextOutput(writer reopen.Writer, format TextFormatFunc) (o *TextOutput) {
     o = new(TextOutput)
     o.format = format
     o.outputChannel = make(chan []byte, outputChannelSize)
-    o.writer = bufio.NewWriter(writer)
+
+    // Buffer if writing to file
+    switch w := writer.(type) {
+        case *reopen.FileWriter:
+            o.writer = reopen.NewBufferedFileWriter(w)
+        default:
+            o.writer = w
+    }
+
     o.wait = make(chan bool)
     return
 }
 
 func NewTextOutputFromFilename(fname string, format TextFormatFunc) (o *TextOutput, err error) {
     if fname == "" || fname == "-" {
-        return NewTextOutput(os.Stdout, format), nil
+        return NewTextOutput(reopen.Stdout, format), nil
     }
-    writer, err := os.Create(fname)
+    writer, err := reopen.NewFileWriter(fname)
     if err != nil {
         return
     }
@@ -72,13 +78,23 @@ func (o *TextOutput) RunOutputLoop() {
             log.Fatalf("dnstap.TextOutput: write failed: %s\n", err)
             break
         }
-        o.writer.Flush()
+        // Flush if it's a buffered interface
+        if w, ok := o.writer.(interface{Flush()}); ok {
+            w.Flush()
+        }
     }
     close(o.wait)
+}
+
+func (o *TextOutput) Reopen() {
+    o.writer.Reopen()
 }
 
 func (o *TextOutput) Close() {
     close(o.outputChannel)
     <-o.wait
-    o.writer.Flush()
+    // Flush if it's a buffered interface
+    if w, ok := o.writer.(interface{Flush()}); ok {
+        w.Flush()
+    }
 }
