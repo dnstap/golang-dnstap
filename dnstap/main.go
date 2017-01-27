@@ -22,6 +22,7 @@ import "log"
 import "os"
 import "os/signal"
 import "runtime"
+import "syscall"
 
 import dnstap "github.com/dnstap/golang-dnstap"
 
@@ -53,6 +54,54 @@ Quiet text output format mnemonics:
 `)
 }
 
+func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
+    return func() dnstap.Output {
+        var o dnstap.Output
+        var err error
+        if text {
+            o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat)
+        } else if yaml {
+            o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat)
+        } else {
+            o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
+        }
+
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "dnstap: Failed to open output file: %s\n", err)
+            os.Exit(1)
+        }
+
+        go o.RunOutputLoop()
+        return o
+    }
+}
+
+func outputLoop(opener func() dnstap.Output, data <-chan []byte) {
+    sigch := make(chan os.Signal,1)
+    signal.Notify(sigch, os.Interrupt, syscall.SIGHUP)
+    o := opener()
+    defer func() {
+        o.Close()
+        os.Exit(0)
+    }()
+    for {
+        select {
+        case b, ok := <-data:
+            if !ok {
+                return
+            }
+            o.GetOutputChannel() <- b
+        case sig := <-sigch:
+            if sig == syscall.SIGHUP {
+                o.Close()
+                o = opener()
+                continue
+            }
+            return
+        }
+    }
+}
+
 func main() {
     var err error
     var i dnstap.Input
@@ -64,46 +113,26 @@ func main() {
 
     // Handle command-line arguments.
     flag.Parse()
-    
+
     if *flagReadFile == "" && *flagReadSock == "" {
         fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
         os.Exit(1)
     }
-    
+
     if *flagWriteFile == "-" {
         if *flagQuietText == false && *flagYamlText == false {
             *flagQuietText = true
         }
     }
-    
+
     if *flagReadFile != "" && *flagReadSock != "" {
         fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r or -u.\n")
         os.Exit(1)
     }
 
-    // Open the output and start the output loop.
-    if *flagQuietText {
-        o, err = dnstap.NewTextOutputFromFilename(*flagWriteFile, dnstap.TextFormat)
-    } else if *flagYamlText {
-        o, err = dnstap.NewTextOutputFromFilename(*flagWriteFile, dnstap.YamlFormat)
-    } else {
-        o, err = dnstap.NewFrameStreamOutputFromFilename(*flagWriteFile)
-    }
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "dnstap: Failed to open output file: %s\n", err)
-        os.Exit(1)
-    }
-    go o.RunOutputLoop()
-
-    // Handle SIGINT.
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
-    go func(){
-        for _ = range c {
-            o.Close()
-            os.Exit(0)
-        }
-    }()
+    // Start the output loop.
+    output := make(chan []byte, 1)
+    go outputLoop(outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText), output)
 
     // Open the input and start the input loop.
     if *flagReadFile != "" {
@@ -121,7 +150,7 @@ func main() {
         }
         fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", *flagReadSock)
     }
-    go i.ReadInto(o.GetOutputChannel())
+    go i.ReadInto(output)
 
     // Wait for input loop to finish.
     i.Wait()
