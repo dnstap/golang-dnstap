@@ -105,7 +105,6 @@ func outputLoop(opener func() dnstap.Output, data <-chan []byte) {
 func main() {
     var err error
     var i dnstap.Input
-    var o dnstap.Output
 
     runtime.GOMAXPROCS(runtime.NumCPU())
     log.SetFlags(0)
@@ -154,7 +153,4 @@ func main() {
 
     // Wait for input loop to finish.
     i.Wait()
-
-    // Shut down the output loop.
-    o.Close()
 }
