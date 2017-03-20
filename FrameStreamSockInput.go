@@ -21,42 +21,42 @@ import "net"
 import "os"
 
 type FrameStreamSockInput struct {
-    wait        chan bool
-    listener    net.Listener
+	wait     chan bool
+	listener net.Listener
 }
 
 func NewFrameStreamSockInput(listener net.Listener) (input *FrameStreamSockInput) {
-    input = new(FrameStreamSockInput)
-    input.listener = listener
-    return
+	input = new(FrameStreamSockInput)
+	input.listener = listener
+	return
 }
 
 func NewFrameStreamSockInputFromPath(socketPath string) (input *FrameStreamSockInput, err error) {
-    os.Remove(socketPath)
-    listener, err := net.Listen("unix", socketPath)
-    if err != nil {
-        return
-    }
-    return NewFrameStreamSockInput(listener), nil
+	os.Remove(socketPath)
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		return
+	}
+	return NewFrameStreamSockInput(listener), nil
 }
 
 func (input *FrameStreamSockInput) ReadInto(output chan []byte) {
-    for {
-        conn, err := input.listener.Accept()
-        if err != nil {
-            log.Printf("net.Listener.Accept() failed: %s\n", err)
-            continue
-        }
-        i, err := NewFrameStreamInput(conn, true)
-        if err != nil {
-            log.Printf("dnstap.NewFrameStreamInput() failed: %s\n", err)
-            continue
-        }
-        log.Printf("dnstap.FrameStreamSockInput: accepted a socket connection\n")
-        go i.ReadInto(output)
-    }
+	for {
+		conn, err := input.listener.Accept()
+		if err != nil {
+			log.Printf("net.Listener.Accept() failed: %s\n", err)
+			continue
+		}
+		i, err := NewFrameStreamInput(conn, true)
+		if err != nil {
+			log.Printf("dnstap.NewFrameStreamInput() failed: %s\n", err)
+			continue
+		}
+		log.Printf("dnstap.FrameStreamSockInput: accepted a socket connection\n")
+		go i.ReadInto(output)
+	}
 }
 
 func (input *FrameStreamSockInput) Wait() {
-    select {}
+	select {}
 }

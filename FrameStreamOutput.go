@@ -23,50 +23,50 @@ import "os"
 import framestream "github.com/farsightsec/golang-framestream"
 
 type FrameStreamOutput struct {
-    outputChannel   chan []byte
-    wait            chan bool
-    enc             *framestream.Encoder
+	outputChannel chan []byte
+	wait          chan bool
+	enc           *framestream.Encoder
 }
 
 func NewFrameStreamOutput(w io.Writer) (o *FrameStreamOutput, err error) {
-    o = new(FrameStreamOutput)
-    o.outputChannel = make(chan []byte, outputChannelSize)
-    o.enc, err = framestream.NewEncoder(w, &framestream.EncoderOptions{ContentType: FSContentType})
-    if err != nil {
-        return
-    }
-    o.wait = make(chan bool)
-    return
+	o = new(FrameStreamOutput)
+	o.outputChannel = make(chan []byte, outputChannelSize)
+	o.enc, err = framestream.NewEncoder(w, &framestream.EncoderOptions{ContentType: FSContentType})
+	if err != nil {
+		return
+	}
+	o.wait = make(chan bool)
+	return
 }
 
 func NewFrameStreamOutputFromFilename(fname string) (o *FrameStreamOutput, err error) {
-    if fname == "" || fname == "-" {
-        return NewFrameStreamOutput(os.Stdout)
-    }
-    w, err := os.Create(fname)
-    if err != nil {
-        return
-    }
-    return NewFrameStreamOutput(w)
+	if fname == "" || fname == "-" {
+		return NewFrameStreamOutput(os.Stdout)
+	}
+	w, err := os.Create(fname)
+	if err != nil {
+		return
+	}
+	return NewFrameStreamOutput(w)
 }
 
-func (o *FrameStreamOutput) GetOutputChannel() (chan []byte) {
-    return o.outputChannel
+func (o *FrameStreamOutput) GetOutputChannel() chan []byte {
+	return o.outputChannel
 }
 
 func (o *FrameStreamOutput) RunOutputLoop() {
-    for frame := range o.outputChannel {
-        if _, err := o.enc.Write(frame); err != nil {
-            log.Fatalf("framestream.Encoder.Write() failed: %s\n", err)
-            break
-        }
-    }
-    close(o.wait)
+	for frame := range o.outputChannel {
+		if _, err := o.enc.Write(frame); err != nil {
+			log.Fatalf("framestream.Encoder.Write() failed: %s\n", err)
+			break
+		}
+	}
+	close(o.wait)
 }
 
 func (o *FrameStreamOutput) Close() {
-    close(o.outputChannel)
-    <-o.wait
-    o.enc.Flush()
-    o.enc.Close()
+	close(o.outputChannel)
+	<-o.wait
+	o.enc.Flush()
+	o.enc.Close()
 }

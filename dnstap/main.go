@@ -27,17 +27,17 @@ import "syscall"
 import dnstap "github.com/dnstap/golang-dnstap"
 
 var (
-    flagReadFile    = flag.String("r", "", "read dnstap payloads from file")
-    flagReadSock    = flag.String("u", "", "read dnstap payloads from unix socket")
-    flagWriteFile   = flag.String("w", "-", "write output to file")
-    flagQuietText   = flag.Bool("q", false, "use quiet text output")
-    flagYamlText    = flag.Bool("y", false, "use verbose YAML output")
+	flagReadFile  = flag.String("r", "", "read dnstap payloads from file")
+	flagReadSock  = flag.String("u", "", "read dnstap payloads from unix socket")
+	flagWriteFile = flag.String("w", "-", "write output to file")
+	flagQuietText = flag.Bool("q", false, "use quiet text output")
+	flagYamlText  = flag.Bool("y", false, "use verbose YAML output")
 )
 
 func usage() {
-    fmt.Fprintf(os.Stderr, "Usage: %s [OPTION]...\n", os.Args[0])
-    flag.PrintDefaults()
-    fmt.Fprintf(os.Stderr, `
+	fmt.Fprintf(os.Stderr, "Usage: %s [OPTION]...\n", os.Args[0])
+	flag.PrintDefaults()
+	fmt.Fprintf(os.Stderr, `
 Quiet text output format mnemonics:
     AQ: AUTH_QUERY
     AR: AUTH_RESPONSE
@@ -55,102 +55,102 @@ Quiet text output format mnemonics:
 }
 
 func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
-    return func() dnstap.Output {
-        var o dnstap.Output
-        var err error
-        if text {
-            o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat)
-        } else if yaml {
-            o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat)
-        } else {
-            o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
-        }
+	return func() dnstap.Output {
+		var o dnstap.Output
+		var err error
+		if text {
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat)
+		} else if yaml {
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat)
+		} else {
+			o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
+		}
 
-        if err != nil {
-            fmt.Fprintf(os.Stderr, "dnstap: Failed to open output file: %s\n", err)
-            os.Exit(1)
-        }
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to open output file: %s\n", err)
+			os.Exit(1)
+		}
 
-        go o.RunOutputLoop()
-        return o
-    }
+		go o.RunOutputLoop()
+		return o
+	}
 }
 
 func outputLoop(opener func() dnstap.Output, data <-chan []byte) {
-    sigch := make(chan os.Signal,1)
-    signal.Notify(sigch, os.Interrupt, syscall.SIGHUP)
-    o := opener()
-    defer func() {
-        o.Close()
-        os.Exit(0)
-    }()
-    for {
-        select {
-        case b, ok := <-data:
-            if !ok {
-                return
-            }
-            o.GetOutputChannel() <- b
-        case sig := <-sigch:
-            if sig == syscall.SIGHUP {
-                o.Close()
-                o = opener()
-                continue
-            }
-            return
-        }
-    }
+	sigch := make(chan os.Signal, 1)
+	signal.Notify(sigch, os.Interrupt, syscall.SIGHUP)
+	o := opener()
+	defer func() {
+		o.Close()
+		os.Exit(0)
+	}()
+	for {
+		select {
+		case b, ok := <-data:
+			if !ok {
+				return
+			}
+			o.GetOutputChannel() <- b
+		case sig := <-sigch:
+			if sig == syscall.SIGHUP {
+				o.Close()
+				o = opener()
+				continue
+			}
+			return
+		}
+	}
 }
 
 func main() {
-    var err error
-    var i dnstap.Input
+	var err error
+	var i dnstap.Input
 
-    runtime.GOMAXPROCS(runtime.NumCPU())
-    log.SetFlags(0)
-    flag.Usage = usage
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	log.SetFlags(0)
+	flag.Usage = usage
 
-    // Handle command-line arguments.
-    flag.Parse()
+	// Handle command-line arguments.
+	flag.Parse()
 
-    if *flagReadFile == "" && *flagReadSock == "" {
-        fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
-        os.Exit(1)
-    }
+	if *flagReadFile == "" && *flagReadSock == "" {
+		fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
+		os.Exit(1)
+	}
 
-    if *flagWriteFile == "-" {
-        if *flagQuietText == false && *flagYamlText == false {
-            *flagQuietText = true
-        }
-    }
+	if *flagWriteFile == "-" {
+		if *flagQuietText == false && *flagYamlText == false {
+			*flagQuietText = true
+		}
+	}
 
-    if *flagReadFile != "" && *flagReadSock != "" {
-        fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r or -u.\n")
-        os.Exit(1)
-    }
+	if *flagReadFile != "" && *flagReadSock != "" {
+		fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r or -u.\n")
+		os.Exit(1)
+	}
 
-    // Start the output loop.
-    output := make(chan []byte, 1)
-    go outputLoop(outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText), output)
+	// Start the output loop.
+	output := make(chan []byte, 1)
+	go outputLoop(outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText), output)
 
-    // Open the input and start the input loop.
-    if *flagReadFile != "" {
-        i, err = dnstap.NewFrameStreamInputFromFilename(*flagReadFile)
-        if err != nil {
-            fmt.Fprintf(os.Stderr, "dnstap: Failed to open input file: %s\n", err)
-            os.Exit(1)
-        }
-        fmt.Fprintf(os.Stderr, "dnstap: opened input file %s\n", *flagReadFile)
-    } else if *flagReadSock != "" {
-        i, err = dnstap.NewFrameStreamSockInputFromPath(*flagReadSock)
-        if err != nil {
-            fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket: %s\n", err)
-            os.Exit(1)
-        }
-        fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", *flagReadSock)
-    }
-    go i.ReadInto(output)
+	// Open the input and start the input loop.
+	if *flagReadFile != "" {
+		i, err = dnstap.NewFrameStreamInputFromFilename(*flagReadFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input file: %s\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "dnstap: opened input file %s\n", *flagReadFile)
+	} else if *flagReadSock != "" {
+		i, err = dnstap.NewFrameStreamSockInputFromPath(*flagReadSock)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket: %s\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", *flagReadSock)
+	}
+	go i.ReadInto(output)
 
-    // Wait for input loop to finish.
-    i.Wait()
+	// Wait for input loop to finish.
+	i.Wait()
 }

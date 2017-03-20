@@ -23,49 +23,49 @@ import "os"
 import framestream "github.com/farsightsec/golang-framestream"
 
 type FrameStreamInput struct {
-    wait        chan bool
-    decoder     *framestream.Decoder
+	wait    chan bool
+	decoder *framestream.Decoder
 }
 
 func NewFrameStreamInput(r io.ReadWriter, bi bool) (input *FrameStreamInput, err error) {
-    input = new(FrameStreamInput)
-    decoderOptions := framestream.DecoderOptions{
-        ContentType: FSContentType,
-        Bidirectional: bi,
-    }
-    input.decoder, err = framestream.NewDecoder(r, &decoderOptions)
-    if err != nil {
-        return
-    }
-    input.wait = make(chan bool)
-    return
+	input = new(FrameStreamInput)
+	decoderOptions := framestream.DecoderOptions{
+		ContentType:   FSContentType,
+		Bidirectional: bi,
+	}
+	input.decoder, err = framestream.NewDecoder(r, &decoderOptions)
+	if err != nil {
+		return
+	}
+	input.wait = make(chan bool)
+	return
 }
 
 func NewFrameStreamInputFromFilename(fname string) (input *FrameStreamInput, err error) {
-    file, err := os.Open(fname)
-    if err != nil {
-        return nil, err
-    }
-    input, err = NewFrameStreamInput(file, false)
-    return
+	file, err := os.Open(fname)
+	if err != nil {
+		return nil, err
+	}
+	input, err = NewFrameStreamInput(file, false)
+	return
 }
 
 func (input *FrameStreamInput) ReadInto(output chan []byte) {
-    for {
-        buf, err := input.decoder.Decode()
-        if err != nil {
-            if err != io.EOF {
-                log.Printf("framestream.Decoder.Decode() failed: %s\n", err)
-            }
-            break
-        }
-        newbuf := make([]byte, len(buf))
-        copy(newbuf, buf)
-        output <- newbuf
-    }
-    close(input.wait)
+	for {
+		buf, err := input.decoder.Decode()
+		if err != nil {
+			if err != io.EOF {
+				log.Printf("framestream.Decoder.Decode() failed: %s\n", err)
+			}
+			break
+		}
+		newbuf := make([]byte, len(buf))
+		copy(newbuf, buf)
+		output <- newbuf
+	}
+	close(input.wait)
 }
 
 func (input *FrameStreamInput) Wait() {
-    <-input.wait
+	<-input.wait
 }
