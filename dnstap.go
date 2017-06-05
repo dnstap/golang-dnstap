@@ -21,12 +21,12 @@ const outputChannelSize = 32
 var FSContentType = []byte("protobuf:dnstap.Dnstap")
 
 type Input interface {
-    ReadInto(chan []byte)
-    Wait()
+	ReadInto(chan []byte)
+	Wait()
 }
 
 type Output interface {
-    GetOutputChannel() chan []byte
-    RunOutputLoop()
-    Close()
+	GetOutputChannel() chan []byte
+	RunOutputLoop()
+	Close()
 }

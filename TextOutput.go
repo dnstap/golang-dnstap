@@ -26,59 +26,59 @@ import "github.com/golang/protobuf/proto"
 type TextFormatFunc func(*Dnstap) ([]byte, bool)
 
 type TextOutput struct {
-    format          TextFormatFunc
-    outputChannel   chan []byte
-    wait            chan bool
-    writer          *bufio.Writer
+	format        TextFormatFunc
+	outputChannel chan []byte
+	wait          chan bool
+	writer        *bufio.Writer
 }
 
 func NewTextOutput(writer io.Writer, format TextFormatFunc) (o *TextOutput) {
-    o = new(TextOutput)
-    o.format = format
-    o.outputChannel = make(chan []byte, outputChannelSize)
-    o.writer = bufio.NewWriter(writer)
-    o.wait = make(chan bool)
-    return
+	o = new(TextOutput)
+	o.format = format
+	o.outputChannel = make(chan []byte, outputChannelSize)
+	o.writer = bufio.NewWriter(writer)
+	o.wait = make(chan bool)
+	return
 }
 
 func NewTextOutputFromFilename(fname string, format TextFormatFunc) (o *TextOutput, err error) {
-    if fname == "" || fname == "-" {
-        return NewTextOutput(os.Stdout, format), nil
-    }
-    writer, err := os.Create(fname)
-    if err != nil {
-        return
-    }
-    return NewTextOutput(writer, format), nil
+	if fname == "" || fname == "-" {
+		return NewTextOutput(os.Stdout, format), nil
+	}
+	writer, err := os.Create(fname)
+	if err != nil {
+		return
+	}
+	return NewTextOutput(writer, format), nil
 }
 
-func (o *TextOutput) GetOutputChannel() (chan []byte) {
-    return o.outputChannel
+func (o *TextOutput) GetOutputChannel() chan []byte {
+	return o.outputChannel
 }
 
 func (o *TextOutput) RunOutputLoop() {
-    dt := &Dnstap{}
-    for frame := range o.outputChannel {
-        if err := proto.Unmarshal(frame, dt); err != nil {
-            log.Fatalf("dnstap.TextOutput: proto.Unmarshal() failed: %s\n", err)
-            break
-        }
-        buf, ok := o.format(dt)
-        if !ok {
-            log.Fatalf("dnstap.TextOutput: text format function failed\n")
-            break
-        }
-        if _, err := o.writer.Write(buf); err != nil {
-            log.Fatalf("dnstap.TextOutput: write failed: %s\n", err)
-            break
-        }
-        o.writer.Flush()
-    }
-    close(o.wait)
+	dt := &Dnstap{}
+	for frame := range o.outputChannel {
+		if err := proto.Unmarshal(frame, dt); err != nil {
+			log.Fatalf("dnstap.TextOutput: proto.Unmarshal() failed: %s\n", err)
+			break
+		}
+		buf, ok := o.format(dt)
+		if !ok {
+			log.Fatalf("dnstap.TextOutput: text format function failed\n")
+			break
+		}
+		if _, err := o.writer.Write(buf); err != nil {
+			log.Fatalf("dnstap.TextOutput: write failed: %s\n", err)
+			break
+		}
+		o.writer.Flush()
+	}
+	close(o.wait)
 }
 
 func (o *TextOutput) Close() {
-    close(o.outputChannel)
-    <-o.wait
-    o.writer.Flush()
+	close(o.outputChannel)
+	<-o.wait
+	o.writer.Flush()
 }
