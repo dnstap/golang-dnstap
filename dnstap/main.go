@@ -78,12 +78,13 @@ func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
 	}
 }
 
-func outputLoop(opener func() dnstap.Output, data <-chan []byte) {
+func outputLoop(opener func() dnstap.Output, data <-chan []byte, done chan<- struct{}) {
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, os.Interrupt, syscall.SIGHUP)
 	o := opener()
 	defer func() {
 		o.Close()
+		close(done)
 		os.Exit(0)
 	}()
 	for {
@@ -133,7 +134,9 @@ func main() {
 
 	// Start the output loop.
 	output := make(chan []byte, 1)
-	go outputLoop(outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText), output)
+	opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText)
+	outDone := make(chan struct{})
+	go outputLoop(opener, output, outDone)
 
 	// Open the input and start the input loop.
 	if *flagReadFile != "" {
@@ -151,8 +154,11 @@ func main() {
 		}
 		fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", *flagReadSock)
 	}
-	go i.ReadInto(output)
+	i.ReadInto(output)
 
 	// Wait for input loop to finish.
 	i.Wait()
+	close(output)
+
+	<-outDone
 }
