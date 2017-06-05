@@ -16,14 +16,16 @@
 
 package dnstap
 
-import "bytes"
-import "fmt"
-import "net"
-import "strconv"
-import "strings"
-import "time"
+import (
+	"bytes"
+	"fmt"
+	"net"
+	"strconv"
+	"strings"
+	"time"
 
-import "github.com/miekg/dns"
+	"github.com/miekg/dns"
+)
 
 const yamlTimeFormat = "2006-01-02 15:04:05.999999999"
 

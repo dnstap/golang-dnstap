@@ -16,11 +16,13 @@
 
 package dnstap
 
-import "io"
-import "log"
-import "os"
+import (
+	"io"
+	"log"
+	"os"
 
-import framestream "github.com/farsightsec/golang-framestream"
+	"github.com/farsightsec/golang-framestream"
+)
 
 type FrameStreamOutput struct {
 	outputChannel chan []byte

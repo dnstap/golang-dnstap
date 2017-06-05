@@ -16,11 +16,13 @@
 
 package dnstap
 
-import "log"
-import "io"
-import "os"
+import (
+	"io"
+	"log"
+	"os"
 
-import framestream "github.com/farsightsec/golang-framestream"
+	"github.com/farsightsec/golang-framestream"
+)
 
 type FrameStreamInput struct {
 	wait    chan bool

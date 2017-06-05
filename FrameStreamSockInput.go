@@ -16,9 +16,11 @@
 
 package dnstap
 
-import "log"
-import "net"
-import "os"
+import (
+	"log"
+	"net"
+	"os"
+)
 
 type FrameStreamSockInput struct {
 	wait     chan bool

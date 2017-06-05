@@ -16,15 +16,17 @@
 
 package main
 
-import "flag"
-import "fmt"
-import "log"
-import "os"
-import "os/signal"
-import "runtime"
-import "syscall"
+import (
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
 
-import dnstap "github.com/dnstap/golang-dnstap"
+	"github.com/dnstap/golang-dnstap"
+)
 
 var (
 	flagReadFile  = flag.String("r", "", "read dnstap payloads from file")

@@ -16,13 +16,15 @@
 
 package dnstap
 
-import "bytes"
-import "fmt"
-import "net"
-import "strconv"
-import "time"
+import (
+	"bytes"
+	"fmt"
+	"net"
+	"strconv"
+	"time"
 
-import "github.com/miekg/dns"
+	"github.com/miekg/dns"
+)
 
 const quietTimeFormat = "15:04:05"
 

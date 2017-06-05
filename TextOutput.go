@@ -16,12 +16,14 @@
 
 package dnstap
 
-import "bufio"
-import "io"
-import "log"
-import "os"
+import (
+	"bufio"
+	"io"
+	"log"
+	"os"
 
-import "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
+)
 
 type TextFormatFunc func(*Dnstap) ([]byte, bool)
 
