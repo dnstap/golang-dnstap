@@ -26,32 +26,39 @@ import (
 )
 
 type TextFormatFunc func(*Dnstap) ([]byte, bool)
+type TextFinishFunc func(*Dnstap) ([]byte, bool)
+
+func DoNothing(dt *Dnstap) (out []byte, ok bool) {
+	return nil, false
+}
 
 type TextOutput struct {
 	format        TextFormatFunc
+	finish        TextFinishFunc
 	outputChannel chan []byte
 	wait          chan bool
 	writer        *bufio.Writer
 }
 
-func NewTextOutput(writer io.Writer, format TextFormatFunc) (o *TextOutput) {
+func NewTextOutput(writer io.Writer, format TextFormatFunc, finish TextFinishFunc) (o *TextOutput) {
 	o = new(TextOutput)
 	o.format = format
+	o.finish = finish
 	o.outputChannel = make(chan []byte, outputChannelSize)
 	o.writer = bufio.NewWriter(writer)
 	o.wait = make(chan bool)
 	return
 }
 
-func NewTextOutputFromFilename(fname string, format TextFormatFunc) (o *TextOutput, err error) {
+func NewTextOutputFromFilename(fname string, format TextFormatFunc, finish TextFinishFunc) (o *TextOutput, err error) {
 	if fname == "" || fname == "-" {
-		return NewTextOutput(os.Stdout, format), nil
+		return NewTextOutput(os.Stdout, format, finish), nil
 	}
 	writer, err := os.Create(fname)
 	if err != nil {
 		return
 	}
-	return NewTextOutput(writer, format), nil
+	return NewTextOutput(writer, format, finish), nil
 }
 
 func (o *TextOutput) GetOutputChannel() chan []byte {
@@ -70,7 +77,8 @@ func (o *TextOutput) RunOutputLoop() {
 			log.Fatalf("dnstap.TextOutput: text format function failed\n")
 			break
 		}
-		if _, err := o.writer.Write(buf); err != nil {
+		_, err := o.writer.Write(buf)
+		if err != nil {
 			log.Fatalf("dnstap.TextOutput: write failed: %s\n", err)
 			break
 		}
@@ -80,6 +88,16 @@ func (o *TextOutput) RunOutputLoop() {
 }
 
 func (o *TextOutput) Close() {
+	dt := &Dnstap{}
+	buf, ok := o.finish(dt)
+	if !ok {
+		log.Fatalf("dnstap.TextOutput: text finish function failed\n")
+	}
+	_, err := o.writer.Write(buf)
+	if err != nil {
+		log.Fatalf("dnstap.TextOutput: write failed: %s\n", err)
+	}
+	o.writer.Flush()
 	close(o.outputChannel)
 	<-o.wait
 	o.writer.Flush()

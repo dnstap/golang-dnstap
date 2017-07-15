@@ -25,7 +25,7 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/dnstap/golang-dnstap"
+	"github.com/bortzmeyer/golang-dnstap"
 )
 
 var (
@@ -34,6 +34,7 @@ var (
 	flagWriteFile = flag.String("w", "-", "write output to file")
 	flagQuietText = flag.Bool("q", false, "use quiet text output")
 	flagYamlText  = flag.Bool("y", false, "use verbose YAML output")
+	flagCdnsText  = flag.Bool("c", false, "use C-DNS output")
 )
 
 func usage() {
@@ -56,14 +57,16 @@ Quiet text output format mnemonics:
 `)
 }
 
-func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
+func outputOpener(fname string, text, yaml bool, cdns bool) func() dnstap.Output {
 	return func() dnstap.Output {
 		var o dnstap.Output
 		var err error
 		if text {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat)
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat, dnstap.DoNothing)
 		} else if yaml {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat)
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat, dnstap.DoNothing)
+		} else if cdns {
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.CdnsFormat, dnstap.CdnsFinish)
 		} else {
 			o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
 		}
@@ -121,8 +124,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if *flagYamlText && *flagCdnsText {
+		fmt.Fprintf(os.Stderr, "dnstap: Error: YAML or C-DNS but not both.\n")
+		os.Exit(1)
+	}
+
 	if *flagWriteFile == "-" {
-		if *flagQuietText == false && *flagYamlText == false {
+		if *flagQuietText == false && *flagYamlText == false && !*flagCdnsText {
 			*flagQuietText = true
 		}
 	}
@@ -134,7 +142,7 @@ func main() {
 
 	// Start the output loop.
 	output := make(chan []byte, 1)
-	opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText)
+	opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText, *flagCdnsText)
 	outDone := make(chan struct{})
 	go outputLoop(opener, output, outDone)
 
