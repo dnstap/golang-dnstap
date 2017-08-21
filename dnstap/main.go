@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"runtime"
@@ -29,6 +30,7 @@ import (
 )
 
 var (
+	flagReadTcp   = flag.String("l", "", "read dnstap payloads from tcp/ip")
 	flagReadFile  = flag.String("r", "", "read dnstap payloads from file")
 	flagReadSock  = flag.String("u", "", "read dnstap payloads from unix socket")
 	flagWriteFile = flag.String("w", "-", "write output to file")
@@ -116,7 +118,7 @@ func main() {
 	// Handle command-line arguments.
 	flag.Parse()
 
-	if *flagReadFile == "" && *flagReadSock == "" {
+	if *flagReadFile == "" && *flagReadSock == "" && *flagReadTcp == "" {
 		fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
 		os.Exit(1)
 	}
@@ -127,8 +129,8 @@ func main() {
 		}
 	}
 
-	if *flagReadFile != "" && *flagReadSock != "" {
-		fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r or -u.\n")
+	if *flagReadFile != "" && *flagReadSock != "" && *flagReadTcp != "" {
+		fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r, -u or -l.\n")
 		os.Exit(1)
 	}
 
@@ -153,6 +155,13 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", *flagReadSock)
+	} else if *flagReadTcp != "" {
+		l, err := net.Listen("tcp", *flagReadTcp)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to listen: %s\n", err)
+			os.Exit(1)
+		}
+		i = dnstap.NewFrameStreamSockInput(l)
 	}
 	i.ReadInto(output)
 
