@@ -46,6 +46,9 @@ message Dnstap {
 
     // One of the following will be filled in.
     optional Message    message = 14;
+
+    // Range of field numbers available for third-party extensions
+    extensions 1000 to max;
 }
 
 // SocketFamily: the network protocol family of a socket. This specifies how
