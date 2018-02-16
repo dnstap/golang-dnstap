@@ -43,11 +43,16 @@ func NewTextOutput(writer io.Writer, format TextFormatFunc) (o *TextOutput) {
 	return
 }
 
-func NewTextOutputFromFilename(fname string, format TextFormatFunc) (o *TextOutput, err error) {
+func NewTextOutputFromFilename(fname string, format TextFormatFunc, append bool) (o *TextOutput, err error) {
 	if fname == "" || fname == "-" {
 		return NewTextOutput(os.Stdout, format), nil
 	}
-	writer, err := os.Create(fname)
+	var writer io.Writer
+	if append {
+		writer, err = os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	} else {
+		writer, err = os.Create(fname)
+	}
 	if err != nil {
 		return
 	}
