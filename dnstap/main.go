@@ -34,7 +34,7 @@ var (
 	flagReadFile   = flag.String("r", "", "read dnstap payloads from file")
 	flagReadSock   = flag.String("u", "", "read dnstap payloads from unix socket")
 	flagWriteFile  = flag.String("w", "-", "write output to file")
-	flagAppendFile = flag.Bool("a", false, "append to the given file, do not overwrite")
+	flagAppendFile = flag.Bool("a", false, "append to the given file, do not overwrite. valid only when outputting a text or YAML file.")
 	flagQuietText  = flag.Bool("q", false, "use quiet text output")
 	flagYamlText   = flag.Bool("y", false, "use verbose YAML output")
 )
