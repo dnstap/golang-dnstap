@@ -32,14 +32,14 @@ func (jt *JSONTime) MarshalJSON() ([]byte, error) {
 }
 
 type JSONDnstap struct {
-	Type     string      `json:type`
-	Identity string      `json:identity,omitempty`
-	Version  string      `json:version,omitempty`
-	Message  JSONMessage `json:message`
+	Type     string      `json:"type"`
+	Identity string      `json:"identity,omitempty"`
+	Version  string      `json:"version,omitempty"`
+	Message  JSONMessage `json:"message"`
 }
 
 type JSONMessage struct {
-	Type            string    `json:type`
+	Type            string    `json:"type"`
 	QueryTime       *JSONTime `json:"query_time,omitempty"`
 	ResponseTime    *JSONTime `json:"response_time,omitempty"`
 	SocketFamily    string    `json:"socket_family,omitempty"`
