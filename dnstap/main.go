@@ -130,6 +130,13 @@ func main() {
 		}
 	}
 
+	if *flagAppendFile == true {
+		if *flagWriteFile == "-" || *flagWriteFile == "" {
+			fmt.Fprintf(os.Stderr, "dnstap: Error: -a must specify the file output path.\n")
+			os.Exit(1)
+		}
+	}
+
 	if *flagReadFile != "" && *flagReadSock != "" && *flagReadTcp != "" {
 		fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r, -u or -l.\n")
 		os.Exit(1)
