@@ -36,6 +36,7 @@ var (
 	flagWriteFile = flag.String("w", "-", "write output to file")
 	flagQuietText = flag.Bool("q", false, "use quiet text output")
 	flagYamlText  = flag.Bool("y", false, "use verbose YAML output")
+	flagJsonText  = flag.Bool("j", false, "use verbose JSON output")
 )
 
 func usage() {
@@ -58,7 +59,7 @@ Quiet text output format mnemonics:
 `)
 }
 
-func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
+func outputOpener(fname string, text, yaml bool, json bool) func() dnstap.Output {
 	return func() dnstap.Output {
 		var o dnstap.Output
 		var err error
@@ -66,6 +67,8 @@ func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
 			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat)
 		} else if yaml {
 			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat)
+		} else if json {
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.JsonFormat)
 		} else {
 			o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
 		}
@@ -124,9 +127,14 @@ func main() {
 	}
 
 	if *flagWriteFile == "-" {
-		if *flagQuietText == false && *flagYamlText == false {
+		if *flagQuietText == false && *flagYamlText == false && *flagJsonText == false {
 			*flagQuietText = true
 		}
+	}
+
+	if *flagYamlText == true && *flagJsonText == true {
+		fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -y or -j.\n")
+		os.Exit(1)
 	}
 
 	if *flagReadFile != "" && *flagReadSock != "" && *flagReadTcp != "" {
@@ -136,7 +144,7 @@ func main() {
 
 	// Start the output loop.
 	output := make(chan []byte, 1)
-	opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText)
+	opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText, *flagJsonText)
 	outDone := make(chan struct{})
 	go outputLoop(opener, output, outDone)
 
