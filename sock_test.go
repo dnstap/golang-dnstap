@@ -45,6 +45,14 @@ func dialAndSend(t *testing.T) net.Conn {
 	return c
 }
 
+func readOne(t *testing.T, out chan []byte) {
+	select {
+	case <-out:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for frame")
+	}
+}
+
 // Test if dnstap can accept multiple connections on the socket
 func TestMultiConn(t *testing.T) {
 	in, err := NewFrameStreamSockInputFromPath("dnstap.sock")
@@ -59,17 +67,6 @@ func TestMultiConn(t *testing.T) {
 	defer dialAndSend(t).Close()
 	defer dialAndSend(t).Close()
 
-	count := 0
-	for {
-		select {
-		case <-out:
-			count++
-		case <-time.After(time.Second):
-			return
-		}
-	}
-
-	if count != 2 {
-		t.Fatalf("expecting 2 messages but have: %b", count)
-	}
+	readOne(t, out)
+	readOne(t, out)
 }
