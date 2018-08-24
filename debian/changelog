@@ -1,0 +1,5 @@
+golang-github-dnstap-go-dnstap (0.0.0-1) unstable; urgency=medium
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Fri, 17 Aug 2018 15:38:04 -0500

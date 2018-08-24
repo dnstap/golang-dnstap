@@ -1,0 +1,30 @@
+Source: golang-github-dnstap-go-dnstap
+Section: unknown
+Priority: optional
+Maintainer: Farsight Security, Inc. <software@farsightsecurity.com>
+Build-Depends: debhelper (>= 9), dh-golang, golang-go,
+ golang-github-miekg-dns-dev,
+ golang-goprotobuf-dev,
+ golang-github-farsightsec-go-framestream-dev
+Standards-Version: 3.9.8
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: https://anonscm.debian.org/collab-maint/golang-github-dnstap-go-dnstap-dev.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/golang-github-dnstap-go-dnstap-dev.git
+XS-Go-Import-Path: github.com/dnstap/golang-dnstap
+
+Package: dnstap
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: DNSTAP decoding tool
+ DNSTAP is an encoding format for DNS server events.  This package
+ provides a tool to read DNSTAP messages from a file, TCP/IP, or Unix
+ socket and output in DNS text or YAML.
+
+Package: golang-github-dnstap-go-dnstap-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ golang-github-miekg-dns-dev,
+ golang-goprotobuf-dev,
+ golang-github-farsightsec-go-framestream-dev
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
