@@ -1,5 +1,5 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: golang-github-dnstap-go-dnstap
+Upstream-Name: golang-dnstap
 Source: <https://github.com/dnstap/golang-dnstap>
 
 Files: *

@@ -1,4 +1,4 @@
-Source: golang-github-dnstap-go-dnstap
+Source: golang-dnstap
 Section: unknown
 Priority: optional
 Maintainer: Farsight Security, Inc. <software@farsightsecurity.com>
@@ -8,8 +8,8 @@ Build-Depends: debhelper (>= 9), dh-golang, golang-go,
  golang-github-farsightsec-go-framestream-dev
 Standards-Version: 3.9.8
 Homepage: <insert the upstream URL, if relevant>
-#Vcs-Git: https://anonscm.debian.org/collab-maint/golang-github-dnstap-go-dnstap-dev.git
-#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/golang-github-dnstap-go-dnstap-dev.git
+Vcs-Git: https://github.com/dnstap/golang-dnstap.git
+Vcs-Browser: https://github.com/dnstap/golang-dnstap
 XS-Go-Import-Path: github.com/dnstap/golang-dnstap
 
 Package: dnstap
