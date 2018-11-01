@@ -1,3 +1,11 @@
+golang-dnstap (0.1.0-1) UNRELEASED; urgency=medium
+
+  * Miscellaneous debian packaging metadata cleanups. This is release 0.1.0.
+
+  * Add README to dnstap package.
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 01 Nov 2018 14:47:20 -0400
+
 golang-dnstap (0.0.0-1) unstable; urgency=medium
 
   * Initial package release
