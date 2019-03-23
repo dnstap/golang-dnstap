@@ -34,6 +34,7 @@ var (
 	flagReadFile  = flag.String("r", "", "read dnstap payloads from file")
 	flagReadSock  = flag.String("u", "", "read dnstap payloads from unix socket")
 	flagWriteFile = flag.String("w", "-", "write output to file")
+	flagWriteTcp = flag.String("W", "", "write output to TCP")
 	flagQuietText = flag.Bool("q", false, "use quiet text output")
 	flagYamlText  = flag.Bool("y", false, "use verbose YAML output")
 )
@@ -72,6 +73,24 @@ func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "dnstap: Failed to open output file: %s\n", err)
+			os.Exit(1)
+		}
+
+		go o.RunOutputLoop()
+		return o
+	}
+}
+
+func outputOpenerTCP(addr string) func() dnstap.Output {
+	return func() dnstap.Output {
+		var o dnstap.Output
+		var err error
+
+			o, err = dnstap.NewFrameStreamOutputFromTCP(addr)
+
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to open TCP socket: %s\n", err)
 			os.Exit(1)
 		}
 
@@ -136,7 +155,12 @@ func main() {
 
 	// Start the output loop.
 	output := make(chan []byte, 1)
-	opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText)
+	var opener func() dnstap.Output
+	if *flagWriteTcp != "" {
+		opener = outputOpenerTCP(*flagWriteTcp)
+	} else {
+		opener = outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText)
+	}
 	outDone := make(chan struct{})
 	go outputLoop(opener, output, outDone)
 

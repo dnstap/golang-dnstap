@@ -19,10 +19,15 @@ package dnstap
 import (
 	"io"
 	"log"
+	"net"
 	"os"
+	"time"
 
 	"github.com/farsightsec/golang-framestream"
 )
+
+const tcpDialTimeout = 5
+const writeTimeout = 5
 
 type FrameStreamOutput struct {
 	outputChannel chan []byte
@@ -30,10 +35,11 @@ type FrameStreamOutput struct {
 	enc           *framestream.Encoder
 }
 
-func NewFrameStreamOutput(w io.Writer) (o *FrameStreamOutput, err error) {
+func NewFrameStreamOutput(w io.Writer, bi bool) (o *FrameStreamOutput, err error) {
 	o = new(FrameStreamOutput)
 	o.outputChannel = make(chan []byte, outputChannelSize)
-	o.enc, err = framestream.NewEncoder(w, &framestream.EncoderOptions{ContentType: FSContentType})
+	o.enc, err = framestream.NewEncoder(w, &framestream.EncoderOptions{ContentType: FSContentType, Bidirectional: bi})
+	o.enc.Flush()
 	if err != nil {
 		return
 	}
@@ -43,13 +49,22 @@ func NewFrameStreamOutput(w io.Writer) (o *FrameStreamOutput, err error) {
 
 func NewFrameStreamOutputFromFilename(fname string) (o *FrameStreamOutput, err error) {
 	if fname == "" || fname == "-" {
-		return NewFrameStreamOutput(os.Stdout)
+		return NewFrameStreamOutput(os.Stdout, false)
 	}
 	w, err := os.Create(fname)
 	if err != nil {
 		return
 	}
-	return NewFrameStreamOutput(w)
+	return NewFrameStreamOutput(w, false)
+}
+
+func NewFrameStreamOutputFromTCP(addr string) (o *FrameStreamOutput, err error) {
+	conn, err := net.DialTimeout("tcp", addr, tcpDialTimeout*time.Second)
+	if err != nil {
+		return
+	}
+
+	return NewFrameStreamOutput(conn, true)
 }
 
 func (o *FrameStreamOutput) GetOutputChannel() chan []byte {
@@ -58,9 +73,24 @@ func (o *FrameStreamOutput) GetOutputChannel() chan []byte {
 
 func (o *FrameStreamOutput) RunOutputLoop() {
 	for frame := range o.outputChannel {
-		if _, err := o.enc.Write(frame); err != nil {
-			log.Fatalf("framestream.Encoder.Write() failed: %s\n", err)
-			break
+		ch := make(chan error)
+		go func() {
+			if _, err := o.enc.Write(frame); err != nil {
+				ch <- err
+
+			}
+			ch <- nil
+		}()
+		timer := time.NewTimer(writeTimeout * time.Second)
+		select {
+		case err := <-ch:
+			timer.Stop()
+			if err != nil {
+				log.Fatalf("framestream.Encoder.Write() failed: %s\n", err)
+				break
+			}
+		case <-timer.C:
+			log.Fatalf("Timeout writing to FrameStreamOutput")
 		}
 	}
 	close(o.wait)
