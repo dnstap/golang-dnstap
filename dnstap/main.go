@@ -30,12 +30,13 @@ import (
 )
 
 var (
-	flagReadTcp   = flag.String("l", "", "read dnstap payloads from tcp/ip")
-	flagReadFile  = flag.String("r", "", "read dnstap payloads from file")
-	flagReadSock  = flag.String("u", "", "read dnstap payloads from unix socket")
-	flagWriteFile = flag.String("w", "-", "write output to file")
-	flagQuietText = flag.Bool("q", false, "use quiet text output")
-	flagYamlText  = flag.Bool("y", false, "use verbose YAML output")
+	flagReadTcp    = flag.String("l", "", "read dnstap payloads from tcp/ip")
+	flagReadFile   = flag.String("r", "", "read dnstap payloads from file")
+	flagReadSock   = flag.String("u", "", "read dnstap payloads from unix socket")
+	flagWriteFile  = flag.String("w", "-", "write output to file")
+	flagAppendFile = flag.Bool("a", false, "append to the given file, do not overwrite. valid only when outputting a text or YAML file.")
+	flagQuietText  = flag.Bool("q", false, "use quiet text output")
+	flagYamlText   = flag.Bool("y", false, "use verbose YAML output")
 )
 
 func usage() {
@@ -58,14 +59,14 @@ Quiet text output format mnemonics:
 `)
 }
 
-func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
+func outputOpener(fname string, text, yaml bool, append bool) func() dnstap.Output {
 	return func() dnstap.Output {
 		var o dnstap.Output
 		var err error
 		if text {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat)
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat, append)
 		} else if yaml {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat)
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat, append)
 		} else {
 			o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
 		}
@@ -129,6 +130,13 @@ func main() {
 		}
 	}
 
+	if *flagAppendFile == true {
+		if *flagWriteFile == "-" || *flagWriteFile == "" {
+			fmt.Fprintf(os.Stderr, "dnstap: Error: -a must specify the file output path.\n")
+			os.Exit(1)
+		}
+	}
+
 	if *flagReadFile != "" && *flagReadSock != "" && *flagReadTcp != "" {
 		fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r, -u or -l.\n")
 		os.Exit(1)
@@ -136,7 +144,7 @@ func main() {
 
 	// Start the output loop.
 	output := make(chan []byte, 1)
-	opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText)
+	opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText, *flagAppendFile)
 	outDone := make(chan struct{})
 	go outputLoop(opener, output, outDone)
 
