@@ -60,16 +60,16 @@ Quiet text output format mnemonics:
 `)
 }
 
-func outputOpener(fname string, text, yaml, json, append bool) func() dnstap.Output {
+func outputOpener(fname string, text, yaml, json, doAppend bool) func() dnstap.Output {
 	return func() dnstap.Output {
 		var o dnstap.Output
 		var err error
 		if text {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat, append)
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat, doAppend)
 		} else if yaml {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat, append)
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat, doAppend)
 		} else if json {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.JsonFormat, append)
+			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.JsonFormat, doAppend)
 		} else {
 			o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
 		}
