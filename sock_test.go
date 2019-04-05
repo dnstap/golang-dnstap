@@ -1,48 +1,52 @@
 package dnstap
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
-
-	fs "github.com/farsightsec/golang-framestream"
 )
 
-func dialAndSend(t *testing.T) net.Conn {
-	c, err := net.DialTimeout("unix", "dnstap.sock", time.Second)
+func dialAndSend(t *testing.T, network, address string) *FrameStreamSockOutput {
+	var addr net.Addr
+	var err error
+	switch network {
+	case "unix":
+		addr, err = net.ResolveUnixAddr(network, address)
+	case "tcp", "tcp4", "tcp6":
+		addr, err = net.ResolveTCPAddr(network, address)
+	default:
+		err = fmt.Errorf("invalid network %s", network)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var enc *fs.Encoder
-	encChan := make(chan *fs.Encoder)
+	var out *FrameStreamSockOutput
+	outputChan := make(chan *FrameStreamSockOutput)
 
 	go func() {
-		enc, err := fs.NewEncoder(c, &fs.EncoderOptions{FSContentType, true})
+		o, err := NewFrameStreamSockOutput(addr, &SockOutputConfig{
+			Dialer:        &net.Dialer{Timeout: time.Second},
+			WriteTimeout:  time.Second,
+			RetryInterval: time.Second,
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		encChan <- enc
+		outputChan <- o
 	}()
 
 	select {
-	case enc = <-encChan:
+	case out = <-outputChan:
 	case <-time.After(time.Second):
 		t.Fatal("can't create a new encoder")
 	}
 
-	_, err = enc.Write([]byte("frame"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = enc.Flush()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return c
+	go out.RunOutputLoop()
+	out.GetOutputChannel() <- []byte("frame")
+	return out
 }
 
 func readOne(t *testing.T, out chan []byte) {
@@ -64,9 +68,34 @@ func TestMultiConn(t *testing.T) {
 	go in.ReadInto(out)
 
 	// send two framestream messages on different connections
-	defer dialAndSend(t).Close()
-	defer dialAndSend(t).Close()
+	defer dialAndSend(t, "unix", "dnstap.sock").Close()
+	defer dialAndSend(t, "unix", "dnstap.sock").Close()
 
+	readOne(t, out)
+	readOne(t, out)
+}
+
+func TestReconnect(t *testing.T) {
+	// Find an open port on localhost by opening a listener on an
+	// unspecified port, querying its address, then closing it.
+	l, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	laddr := l.Addr()
+	l.Close()
+
+	defer dialAndSend(t, laddr.Network(), laddr.String()).Close()
+	defer dialAndSend(t, laddr.Network(), laddr.String()).Close()
+	time.Sleep(1500 * time.Millisecond)
+	l, err = net.Listen(laddr.Network(), laddr.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	in := NewFrameStreamSockInput(l)
+	out := make(chan []byte)
+	go in.ReadInto(out)
 	readOne(t, out)
 	readOne(t, out)
 }
