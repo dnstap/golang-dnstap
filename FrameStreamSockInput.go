@@ -20,17 +20,23 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 type FrameStreamSockInput struct {
 	wait     chan bool
 	listener net.Listener
+	timeout  time.Duration
 }
 
 func NewFrameStreamSockInput(listener net.Listener) (input *FrameStreamSockInput) {
 	input = new(FrameStreamSockInput)
 	input.listener = listener
 	return
+}
+
+func (input *FrameStreamSockInput) SetTimeout(timeout time.Duration) {
+	input.timeout = timeout
 }
 
 func NewFrameStreamSockInputFromPath(socketPath string) (input *FrameStreamSockInput, err error) {
@@ -49,7 +55,7 @@ func (input *FrameStreamSockInput) ReadInto(output chan []byte) {
 			log.Printf("net.Listener.Accept() failed: %s\n", err)
 			continue
 		}
-		i, err := NewFrameStreamInput(conn, true)
+		i, err := NewFrameStreamInputTimeout(conn, true, input.timeout)
 		if err != nil {
 			log.Printf("dnstap.NewFrameStreamInput() failed: %s\n", err)
 			continue
