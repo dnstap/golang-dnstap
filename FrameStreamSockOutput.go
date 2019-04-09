@@ -25,7 +25,7 @@ import (
 )
 
 type SockOutputConfig struct {
-	WriteTimeout  time.Duration
+	Timeout       time.Duration
 	RetryInterval time.Duration
 	Dialer        *net.Dialer
 }
@@ -44,7 +44,7 @@ func NewFrameStreamSockOutput(address net.Addr, conf *SockOutputConfig) (o *Fram
 		address:       address,
 		wait:          make(chan bool),
 		conf: SockOutputConfig{
-			WriteTimeout:  10 * time.Second,
+			Timeout:       10 * time.Second,
 			RetryInterval: 10 * time.Second,
 		},
 		dialer: &net.Dialer{
@@ -52,8 +52,8 @@ func NewFrameStreamSockOutput(address net.Addr, conf *SockOutputConfig) (o *Fram
 		},
 	}
 	if conf != nil {
-		if conf.WriteTimeout != 0 {
-			o.conf.WriteTimeout = conf.WriteTimeout
+		if conf.Timeout != 0 {
+			o.conf.Timeout = conf.Timeout
 		}
 		if conf.RetryInterval != 0 {
 			o.conf.RetryInterval = conf.RetryInterval
@@ -87,9 +87,8 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 			eopt := &framestream.EncoderOptions{
 				ContentType:   FSContentType,
 				Bidirectional: true,
+				Timeout:       o.conf.Timeout,
 			}
-			c.SetWriteDeadline(time.Now().Add(o.conf.WriteTimeout))
-			c.SetReadDeadline(time.Now().Add(o.conf.WriteTimeout))
 			enc, err = framestream.NewEncoder(c, eopt)
 			if err != nil {
 				log.Printf("framestream.NewEncoder() failed: %v\n", err)
@@ -100,10 +99,8 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 				enc = nil
 				continue
 			}
-			c.SetReadDeadline(time.Time{})
 		}
 
-		c.SetWriteDeadline(time.Now().Add(o.conf.WriteTimeout))
 		if _, err := enc.Write(frame); err != nil {
 			log.Printf("framestream.Encoder.Write() failed: %s\n", err)
 			enc.Close()
@@ -120,8 +117,6 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 		}
 	}
 	if enc != nil {
-		c.SetWriteDeadline(time.Now().Add(o.conf.WriteTimeout))
-		c.SetReadDeadline(time.Now().Add(o.conf.WriteTimeout))
 		enc.Close()
 		c.Close()
 	}
