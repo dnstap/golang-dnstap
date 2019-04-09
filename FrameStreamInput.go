@@ -20,6 +20,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 
 	"github.com/farsightsec/golang-framestream"
 )
@@ -27,13 +28,19 @@ import (
 type FrameStreamInput struct {
 	wait    chan bool
 	decoder *framestream.Decoder
+	timeout time.Duration
 }
 
 func NewFrameStreamInput(r io.ReadWriter, bi bool) (input *FrameStreamInput, err error) {
+	return NewFrameStreamInputTimeout(r, bi, 0)
+}
+
+func NewFrameStreamInputTimeout(r io.ReadWriter, bi bool, timeout time.Duration) (input *FrameStreamInput, err error) {
 	input = new(FrameStreamInput)
 	decoderOptions := framestream.DecoderOptions{
 		ContentType:   FSContentType,
 		Bidirectional: bi,
+		Timeout:       timeout,
 	}
 	input.decoder, err = framestream.NewDecoder(r, &decoderOptions)
 	if err != nil {
