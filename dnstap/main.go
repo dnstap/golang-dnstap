@@ -125,13 +125,30 @@ func main() {
 	// Handle command-line arguments.
 	flag.Parse()
 
-	if *flagReadFile == "" && *flagReadSock == "" && *flagReadTcp == "" {
+	haveInput := false
+	for _, f := range []string{*flagReadFile, *flagReadSock, *flagReadTcp} {
+		if haveInput && f != "" {
+			fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r, -u or -l.\n")
+			os.Exit(1)
+		}
+		haveInput = haveInput || f != ""
+	}
+	if !haveInput {
 		fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
 		os.Exit(1)
 	}
 
+	haveFormat := false
+	for _, f := range []bool{*flagQuietText, *flagYamlText, *flagJsonText} {
+		if haveFormat && f {
+			fmt.Fprintf(os.Stderr, "dnstap: Error: specify at most one of -q, -y, or -j.\n")
+			os.Exit(1)
+		}
+		haveFormat = haveFormat || f
+	}
+
 	if *flagWriteFile == "-" || *flagWriteFile == "" {
-		if *flagQuietText == false && *flagYamlText == false && *flagJsonText == false {
+		if !haveFormat {
 			*flagQuietText = true
 		}
 	}
@@ -141,15 +158,6 @@ func main() {
 			fmt.Fprintf(os.Stderr, "dnstap: Error: -a must specify the file output path.\n")
 			os.Exit(1)
 		}
-	}
-	if *flagYamlText == true && *flagJsonText == true {
-		fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -y or -j.\n")
-		os.Exit(1)
-	}
-
-	if *flagReadFile != "" && *flagReadSock != "" && *flagReadTcp != "" {
-		fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r, -u or -l.\n")
-		os.Exit(1)
 	}
 
 	var output chan []byte
