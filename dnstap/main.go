@@ -130,7 +130,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *flagWriteFile == "-" {
+	if *flagWriteFile == "-" || *flagWriteFile == "" {
 		if *flagQuietText == false && *flagYamlText == false && *flagJsonText == false {
 			*flagQuietText = true
 		}
