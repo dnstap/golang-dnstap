@@ -23,18 +23,27 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/dnstap/golang-dnstap"
 )
 
+type stringList []string
+
+func (sl *stringList) Set(s string) error {
+	*sl = append(*sl, s)
+	return nil
+}
+func (sl *stringList) String() string {
+	return strings.Join(*sl, ", ")
+}
+
 var (
 	flagReadTcp    = flag.String("l", "", "read dnstap payloads from tcp/ip")
-	flagWriteTcp   = flag.String("T", "", "write dnstap payloads to tcp/ip address")
 	flagTimeout    = flag.Duration("t", 0, "I/O timeout for tcp/ip and unix domain sockets")
 	flagReadFile   = flag.String("r", "", "read dnstap payloads from file")
 	flagReadSock   = flag.String("u", "", "read dnstap payloads from unix socket")
-	flagWriteUnix  = flag.String("U", "", "write dnstap payloads to unix socket")
-	flagWriteFile  = flag.String("w", "-", "write output to file")
+	flagWriteFile  = flag.String("w", "", "write output to file")
 	flagAppendFile = flag.Bool("a", false, "append to the given file, do not overwrite. valid only when outputting a text or YAML file.")
 	flagQuietText  = flag.Bool("q", false, "use quiet text output")
 	flagYamlText   = flag.Bool("y", false, "use verbose YAML output")
@@ -65,6 +74,10 @@ func main() {
 	var err error
 	var i dnstap.Input
 
+	var tcpOutputs, unixOutputs stringList
+	flag.Var(&tcpOutputs, "T", "write dnstap payloads to tcp/ip address")
+	flag.Var(&unixOutputs, "U", "write dnstap payloads to unix socket")
+
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	log.SetFlags(0)
 	flag.Usage = usage
@@ -94,58 +107,39 @@ func main() {
 		haveFormat = haveFormat || f
 	}
 
-	if *flagWriteFile == "-" || *flagWriteFile == "" {
-		if !haveFormat {
-			*flagQuietText = true
-		}
+	output := newMirrorOutput()
+	if err = addSockOutputs(output, "tcp", tcpOutputs); err != nil {
+		fmt.Fprintf(os.Stderr, "dnstap: TCP error: %v\n", err)
+		os.Exit(1)
 	}
-
-	if *flagAppendFile == true {
-		if *flagWriteFile == "-" || *flagWriteFile == "" {
-			fmt.Fprintf(os.Stderr, "dnstap: Error: -a must specify the file output path.\n")
-			os.Exit(1)
-		}
+	if err = addSockOutputs(output, "unix", unixOutputs); err != nil {
+		fmt.Fprintf(os.Stderr, "dnstap: Unix socket error: %v\n", err)
+		os.Exit(1)
 	}
-
-	var output dnstap.Output
-
-	// Start the output loop.
-	if *flagWriteTcp == "" && *flagWriteUnix == "" {
+	if *flagWriteFile != "" || len(tcpOutputs)+len(unixOutputs) == 0 {
 		var format dnstap.TextFormatFunc
+		var o dnstap.Output
+
 		switch {
-		case *flagJsonText:
-			format = dnstap.JsonFormat
-		case *flagQuietText:
-			format = dnstap.TextFormat
 		case *flagYamlText:
 			format = dnstap.YamlFormat
+		case *flagQuietText:
+			format = dnstap.TextFormat
+		case *flagJsonText:
+			format = dnstap.JsonFormat
 		}
-		output, err = newFileOutput(*flagWriteFile, format, *flagAppendFile)
+
+		o, err = newFileOutput(*flagWriteFile, format, *flagAppendFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Error writing to file %s: %v",
+			fmt.Fprintf(os.Stderr, "dnstap: File output error on '%s': %v\n",
 				*flagWriteFile, err)
-		}
-		go output.RunOutputLoop()
-	} else {
-		var addr net.Addr
-		if *flagWriteTcp != "" {
-			addr, err = net.ResolveTCPAddr("tcp", *flagWriteTcp)
-		} else {
-			addr, err = net.ResolveUnixAddr("unix", *flagWriteUnix)
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Error: invalid address: %v", err)
 			os.Exit(1)
 		}
-		so, err := dnstap.NewFrameStreamSockOutput(addr)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Error: failed to open socket output: %v", err)
-			os.Exit(1)
-		}
-		so.SetTimeout(*flagTimeout)
-		go so.RunOutputLoop()
-		output = so
+		go o.RunOutputLoop()
+		output.Add(o)
 	}
+
+	go output.RunOutputLoop()
 
 	// Open the input and start the input loop.
 	if *flagReadFile != "" {
@@ -179,4 +173,31 @@ func main() {
 	i.Wait()
 
 	output.Close()
+}
+
+func addSockOutputs(mo *mirrorOutput, network string, addrs stringList) error {
+	var naddr net.Addr
+	var err error
+	for _, addr := range addrs {
+		switch network {
+		case "tcp":
+			naddr, err = net.ResolveTCPAddr(network, addr)
+		case "unix":
+			naddr, err = net.ResolveUnixAddr(network, addr)
+		default:
+			return fmt.Errorf("invalid network '%s'", network)
+		}
+		if err != nil {
+			return err
+		}
+
+		o, err := dnstap.NewFrameStreamSockOutput(naddr)
+		if err != nil {
+			return err
+		}
+		o.SetTimeout(*flagTimeout)
+		go o.RunOutputLoop()
+		mo.Add(o)
+	}
+	return nil
 }
