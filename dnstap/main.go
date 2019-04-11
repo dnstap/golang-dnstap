@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 by Farsight Security, Inc.
+ * Copyright (c) 2013-2019 by Farsight Security, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,7 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
 	"runtime"
-	"syscall"
 
 	"github.com/dnstap/golang-dnstap"
 )
@@ -61,57 +59,6 @@ Quiet text output format mnemonics:
     TQ: TOOL_QUERY
     TR: TOOL_RESPONSE
 `)
-}
-
-func outputOpener(fname string, text, yaml, json, doAppend bool) func() dnstap.Output {
-	return func() dnstap.Output {
-		var o dnstap.Output
-		var err error
-		if text {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat, doAppend)
-		} else if yaml {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat, doAppend)
-		} else if json {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.JsonFormat, doAppend)
-		} else {
-			o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
-		}
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Failed to open output file: %s\n", err)
-			os.Exit(1)
-		}
-
-		go o.RunOutputLoop()
-		return o
-	}
-}
-
-func outputLoop(opener func() dnstap.Output, data <-chan []byte, done chan<- struct{}) {
-	sigch := make(chan os.Signal, 1)
-	signal.Notify(sigch, os.Interrupt, syscall.SIGHUP)
-	o := opener()
-	defer func() {
-		o.Close()
-		close(done)
-		os.Exit(0)
-	}()
-	for {
-		select {
-		case b, ok := <-data:
-			if !ok {
-				return
-			}
-			o.GetOutputChannel() <- b
-		case sig := <-sigch:
-			if sig == syscall.SIGHUP {
-				o.Close()
-				o = opener()
-				continue
-			}
-			return
-		}
-	}
 }
 
 func main() {
@@ -160,18 +107,27 @@ func main() {
 		}
 	}
 
-	var output chan []byte
-	outDone := make(chan struct{})
+	var output dnstap.Output
 
 	// Start the output loop.
 	if *flagWriteTcp == "" && *flagWriteUnix == "" {
-		output = make(chan []byte, 1)
-		opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText,
-			*flagJsonText, *flagAppendFile)
-		go outputLoop(opener, output, outDone)
+		var format dnstap.TextFormatFunc
+		switch {
+		case *flagJsonText:
+			format = dnstap.JsonFormat
+		case *flagQuietText:
+			format = dnstap.TextFormat
+		case *flagYamlText:
+			format = dnstap.YamlFormat
+		}
+		output, err = newFileOutput(*flagWriteFile, format, *flagAppendFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Error writing to file %s: %v",
+				*flagWriteFile, err)
+		}
+		go output.RunOutputLoop()
 	} else {
 		var addr net.Addr
-		var sockOutput *dnstap.FrameStreamSockOutput
 		if *flagWriteTcp != "" {
 			addr, err = net.ResolveTCPAddr("tcp", *flagWriteTcp)
 		} else {
@@ -181,15 +137,14 @@ func main() {
 			fmt.Fprintf(os.Stderr, "dnstap: Error: invalid address: %v", err)
 			os.Exit(1)
 		}
-		sockOutput, err = dnstap.NewFrameStreamSockOutput(addr)
+		so, err := dnstap.NewFrameStreamSockOutput(addr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "dnstap: Error: failed to open socket output: %v", err)
 			os.Exit(1)
 		}
-		sockOutput.SetTimeout(*flagTimeout)
-		output = sockOutput.GetOutputChannel()
-		go sockOutput.RunOutputLoop()
-		close(outDone)
+		so.SetTimeout(*flagTimeout)
+		go so.RunOutputLoop()
+		output = so
 	}
 
 	// Open the input and start the input loop.
@@ -220,11 +175,8 @@ func main() {
 		si.SetTimeout(*flagTimeout)
 		i = si
 	}
-	i.ReadInto(output)
-
-	// Wait for input loop to finish.
+	go i.ReadInto(output.GetOutputChannel())
 	i.Wait()
-	close(output)
 
-	<-outDone
+	output.Close()
 }
