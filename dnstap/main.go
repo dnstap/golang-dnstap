@@ -24,6 +24,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/dnstap/golang-dnstap"
 )
@@ -71,9 +72,6 @@ Quiet text output format mnemonics:
 }
 
 func main() {
-	var err error
-	var i dnstap.Input
-
 	var tcpOutputs, unixOutputs stringList
 	flag.Var(&tcpOutputs, "T", "write dnstap payloads to tcp/ip address")
 	flag.Var(&unixOutputs, "U", "write dnstap payloads to unix socket")
@@ -85,15 +83,7 @@ func main() {
 	// Handle command-line arguments.
 	flag.Parse()
 
-	haveInput := false
-	for _, f := range []string{*flagReadFile, *flagReadSock, *flagReadTcp} {
-		if haveInput && f != "" {
-			fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r, -u or -l.\n")
-			os.Exit(1)
-		}
-		haveInput = haveInput || f != ""
-	}
-	if !haveInput {
+	if len(*flagReadFile)+len(*flagReadSock)+len(*flagReadTcp) == 0 {
 		fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
 		os.Exit(1)
 	}
@@ -108,17 +98,16 @@ func main() {
 	}
 
 	output := newMirrorOutput()
-	if err = addSockOutputs(output, "tcp", tcpOutputs); err != nil {
+	if err := addSockOutputs(output, "tcp", tcpOutputs); err != nil {
 		fmt.Fprintf(os.Stderr, "dnstap: TCP error: %v\n", err)
 		os.Exit(1)
 	}
-	if err = addSockOutputs(output, "unix", unixOutputs); err != nil {
+	if err := addSockOutputs(output, "unix", unixOutputs); err != nil {
 		fmt.Fprintf(os.Stderr, "dnstap: Unix socket error: %v\n", err)
 		os.Exit(1)
 	}
 	if *flagWriteFile != "" || len(tcpOutputs)+len(unixOutputs) == 0 {
 		var format dnstap.TextFormatFunc
-		var o dnstap.Output
 
 		switch {
 		case *flagYamlText:
@@ -129,7 +118,7 @@ func main() {
 			format = dnstap.JsonFormat
 		}
 
-		o, err = newFileOutput(*flagWriteFile, format, *flagAppendFile)
+		o, err := newFileOutput(*flagWriteFile, format, *flagAppendFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "dnstap: File output error on '%s': %v\n",
 				*flagWriteFile, err)
@@ -141,38 +130,49 @@ func main() {
 
 	go output.RunOutputLoop()
 
+	var iwg sync.WaitGroup
 	// Open the input and start the input loop.
 	if *flagReadFile != "" {
-		i, err = dnstap.NewFrameStreamInputFromFilename(*flagReadFile)
+		i, err := dnstap.NewFrameStreamInputFromFilename(*flagReadFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input file: %s\n", err)
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "dnstap: opened input file %s\n", *flagReadFile)
-	} else if *flagReadSock != "" {
-		var si *dnstap.FrameStreamSockInput
-		si, err = dnstap.NewFrameStreamSockInputFromPath(*flagReadSock)
+		iwg.Add(1)
+		go runInput(i, output, &iwg)
+	}
+	if *flagReadSock != "" {
+		i, err := dnstap.NewFrameStreamSockInputFromPath(*flagReadSock)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket: %s\n", err)
 			os.Exit(1)
 		}
-		si.SetTimeout(*flagTimeout)
-		i = si
+		i.SetTimeout(*flagTimeout)
 		fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", *flagReadSock)
-	} else if *flagReadTcp != "" {
+		iwg.Add(1)
+		go runInput(i, output, &iwg)
+	}
+	if *flagReadTcp != "" {
 		l, err := net.Listen("tcp", *flagReadTcp)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "dnstap: Failed to listen: %s\n", err)
 			os.Exit(1)
 		}
-		si := dnstap.NewFrameStreamSockInput(l)
-		si.SetTimeout(*flagTimeout)
-		i = si
+		i := dnstap.NewFrameStreamSockInput(l)
+		i.SetTimeout(*flagTimeout)
+		iwg.Add(1)
+		go runInput(i, output, &iwg)
 	}
-	go i.ReadInto(output.GetOutputChannel())
-	i.Wait()
+	iwg.Wait()
 
 	output.Close()
+}
+
+func runInput(i dnstap.Input, o dnstap.Output, wg *sync.WaitGroup) {
+	go i.ReadInto(o.GetOutputChannel())
+	i.Wait()
+	wg.Done()
 }
 
 func addSockOutputs(mo *mirrorOutput, network string, addrs stringList) error {
