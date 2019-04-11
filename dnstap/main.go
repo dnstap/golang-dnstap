@@ -40,10 +40,7 @@ func (sl *stringList) String() string {
 }
 
 var (
-	flagReadTcp    = flag.String("l", "", "read dnstap payloads from tcp/ip")
 	flagTimeout    = flag.Duration("t", 0, "I/O timeout for tcp/ip and unix domain sockets")
-	flagReadFile   = flag.String("r", "", "read dnstap payloads from file")
-	flagReadSock   = flag.String("u", "", "read dnstap payloads from unix socket")
 	flagWriteFile  = flag.String("w", "", "write output to file")
 	flagAppendFile = flag.Bool("a", false, "append to the given file, do not overwrite. valid only when outputting a text or YAML file.")
 	flagQuietText  = flag.Bool("q", false, "use quiet text output")
@@ -73,8 +70,13 @@ Quiet text output format mnemonics:
 
 func main() {
 	var tcpOutputs, unixOutputs stringList
+	var fileInputs, tcpInputs, unixInputs stringList
+
 	flag.Var(&tcpOutputs, "T", "write dnstap payloads to tcp/ip address")
 	flag.Var(&unixOutputs, "U", "write dnstap payloads to unix socket")
+	flag.Var(&fileInputs, "r", "read dnstap payloads from file")
+	flag.Var(&tcpInputs, "l", "read dnstap payloads from tcp/ip")
+	flag.Var(&unixInputs, "u", "read dnstap payloads from unix socket")
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	log.SetFlags(0)
@@ -83,7 +85,7 @@ func main() {
 	// Handle command-line arguments.
 	flag.Parse()
 
-	if len(*flagReadFile)+len(*flagReadSock)+len(*flagReadTcp) == 0 {
+	if len(fileInputs)+len(unixInputs)+len(tcpInputs) == 0 {
 		fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
 		os.Exit(1)
 	}
@@ -132,31 +134,31 @@ func main() {
 
 	var iwg sync.WaitGroup
 	// Open the input and start the input loop.
-	if *flagReadFile != "" {
-		i, err := dnstap.NewFrameStreamInputFromFilename(*flagReadFile)
+	for _, fname := range fileInputs {
+		i, err := dnstap.NewFrameStreamInputFromFilename(fname)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input file: %s\n", err)
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input file %s: %v\n", fname, err)
 			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "dnstap: opened input file %s\n", *flagReadFile)
+		fmt.Fprintf(os.Stderr, "dnstap: opened input file %s\n", fname)
 		iwg.Add(1)
 		go runInput(i, output, &iwg)
 	}
-	if *flagReadSock != "" {
-		i, err := dnstap.NewFrameStreamSockInputFromPath(*flagReadSock)
+	for _, path := range unixInputs {
+		i, err := dnstap.NewFrameStreamSockInputFromPath(path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket: %s\n", err)
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket %s: %v\n", path, err)
 			os.Exit(1)
 		}
 		i.SetTimeout(*flagTimeout)
-		fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", *flagReadSock)
+		fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", path)
 		iwg.Add(1)
 		go runInput(i, output, &iwg)
 	}
-	if *flagReadTcp != "" {
-		l, err := net.Listen("tcp", *flagReadTcp)
+	for _, addr := range tcpInputs {
+		l, err := net.Listen("tcp", addr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Failed to listen: %s\n", err)
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to listen on %s: %v\n", addr, err)
 			os.Exit(1)
 		}
 		i := dnstap.NewFrameStreamSockInput(l)
