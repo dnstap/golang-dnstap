@@ -26,14 +26,14 @@ func dialAndSend(t *testing.T, network, address string) *FrameStreamSockOutput {
 	outputChan := make(chan *FrameStreamSockOutput)
 
 	go func() {
-		o, err := NewFrameStreamSockOutput(addr, &SockOutputConfig{
-			Dialer:        &net.Dialer{Timeout: time.Second},
-			Timeout:       time.Second,
-			RetryInterval: time.Second,
-		})
+		o, err := NewFrameStreamSockOutput(addr)
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		o.SetDialer(&net.Dialer{Timeout: time.Second})
+		o.SetTimeout(time.Second)
+		o.SetRetryInterval(time.Second)
 
 		outputChan <- o
 	}()
