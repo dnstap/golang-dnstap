@@ -98,6 +98,8 @@ func yamlConvertMessage(m *Message, s *bytes.Buffer) {
 	s.WriteString("---\n")
 }
 
+// YamlFormat renders a dnstap message in YAML format. Any encapsulated DNS
+// messages are rendered as strings in a format similar to 'dig' output.
 func YamlFormat(dt *Dnstap) (out []byte, ok bool) {
 	var s bytes.Buffer
 

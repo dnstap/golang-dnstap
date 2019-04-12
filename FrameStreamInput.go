@@ -25,16 +25,23 @@ import (
 	"github.com/farsightsec/golang-framestream"
 )
 
+// A FrameStreamInput reads dnstap data from an io.ReadWriter.
 type FrameStreamInput struct {
 	wait    chan bool
 	decoder *framestream.Decoder
 	timeout time.Duration
 }
 
+// NewFrameStreamInput creates a FrameStreamInput reading data from the given
+// io.ReadWriter. If bi is true, the input will use the bidirectional
+// framestream protocol suitable for TCP and unix domain socket connections.
 func NewFrameStreamInput(r io.ReadWriter, bi bool) (input *FrameStreamInput, err error) {
 	return NewFrameStreamInputTimeout(r, bi, 0)
 }
 
+// NewFrameStreamInputTimeout creates a FramestreamInput reading data from the
+// given io.ReadWriter with a timeout applied to reading and (for bidirectional
+// inputs) writing control messages.
 func NewFrameStreamInputTimeout(r io.ReadWriter, bi bool, timeout time.Duration) (input *FrameStreamInput, err error) {
 	input = new(FrameStreamInput)
 	decoderOptions := framestream.DecoderOptions{
@@ -50,6 +57,8 @@ func NewFrameStreamInputTimeout(r io.ReadWriter, bi bool, timeout time.Duration)
 	return
 }
 
+// NewFrameStreamInputFromFilename creates a FrameStreamInput reading from
+// the named file.
 func NewFrameStreamInputFromFilename(fname string) (input *FrameStreamInput, err error) {
 	file, err := os.Open(fname)
 	if err != nil {
@@ -59,6 +68,9 @@ func NewFrameStreamInputFromFilename(fname string) (input *FrameStreamInput, err
 	return
 }
 
+// ReadInto reads data from the FrameStreamInput into the output channel.
+//
+// ReadInto satisfies the dnstap Input interface.
 func (input *FrameStreamInput) ReadInto(output chan []byte) {
 	for {
 		buf, err := input.decoder.Decode()
@@ -75,6 +87,9 @@ func (input *FrameStreamInput) ReadInto(output chan []byte) {
 	close(input.wait)
 }
 
+// Wait reeturns when ReadInto has finished.
+//
+// Wait satisfies the dnstap Input interface.
 func (input *FrameStreamInput) Wait() {
 	<-input.wait
 }

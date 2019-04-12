@@ -119,6 +119,8 @@ func convertJSONMessage(m *Message) JSONMessage {
 	return jMsg
 }
 
+// JsonFormat renders a Dnstap message in JSON format. Any encapsulated
+// DNS messages are rendered as strings in a format similar to 'dig' output.
 func JsonFormat(dt *Dnstap) (out []byte, ok bool) {
 	var s bytes.Buffer
 

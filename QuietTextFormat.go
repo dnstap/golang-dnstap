@@ -160,6 +160,8 @@ func textConvertMessage(m *Message, s *bytes.Buffer) {
 	s.WriteString("\n")
 }
 
+// TextFormat renders a dnstap message in a compact human-readable text
+// form.
 func TextFormat(dt *Dnstap) (out []byte, ok bool) {
 	var s bytes.Buffer
 

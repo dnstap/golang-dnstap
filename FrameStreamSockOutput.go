@@ -24,6 +24,8 @@ import (
 	"github.com/farsightsec/golang-framestream"
 )
 
+// A FrameStreamSockOutput manages a socket connection and sends dnstap
+// data over a framestream connection on that socket.
 type FrameStreamSockOutput struct {
 	outputChannel chan []byte
 	address       net.Addr
@@ -33,6 +35,8 @@ type FrameStreamSockOutput struct {
 	retry         time.Duration
 }
 
+// NewFrameStreamSockOutput creates a FrameStreamSockOutput manaaging a
+// connection to the given address.
 func NewFrameStreamSockOutput(address net.Addr) (*FrameStreamSockOutput, error) {
 	return &FrameStreamSockOutput{
 		outputChannel: make(chan []byte, outputChannelSize),
@@ -45,22 +49,44 @@ func NewFrameStreamSockOutput(address net.Addr) (*FrameStreamSockOutput, error) 
 	}, nil
 }
 
+// SetTimeout sets the write timeout for data and control messages and the
+// read timeout for handshake responses on the FrameStreamSockOutput's
+// connection. The default timeout is zero, for no timeout.
 func (o *FrameStreamSockOutput) SetTimeout(timeout time.Duration) {
 	o.timeout = timeout
 }
 
+// SetRetryInterval specifies how long the FrameStreamSockOutput will wait
+// before re-establishing a failed connection. The default retry interval
+// is 10 seconds.
 func (o *FrameStreamSockOutput) SetRetryInterval(retry time.Duration) {
 	o.retry = retry
 }
 
+// SetDialer replaces the default net.Dialer for re-establishing the
+// the FrameStreamSockOutput connection. This can be used to set the
+// timeout for connection establishment and enable keepalives
+// new connections.
+//
+// FrameStreamSockOutput uses a default dialer with a 30 second
+// timeout.
 func (o *FrameStreamSockOutput) SetDialer(dialer *net.Dialer) {
 	o.dialer = dialer
 }
 
+// GetOutputChannel returns the channel on which the
+// FrameStreamSockOutput accepts data.
+//
+// GetOutputChannel satisifes the dnstap Output interface.
 func (o *FrameStreamSockOutput) GetOutputChannel() chan []byte {
 	return o.outputChannel
 }
 
+// RunOutputLoop reads data from the output channel and sends it over
+// a connections to the FrameStreamSockOutput's address, establishing
+// the connection as needed.
+//
+// RunOutputLoop satisifes the dnstap Output interface.
 func (o *FrameStreamSockOutput) RunOutputLoop() {
 	var enc *framestream.Encoder
 	var c net.Conn
@@ -114,6 +140,10 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 	close(o.wait)
 }
 
+// Close shuts down the FrameStreamSockOutput's output channel and returns
+// after all pending data has been flushed and the connection has been closed.
+//
+// Close satisifes the dnstap Output interface
 func (o *FrameStreamSockOutput) Close() {
 	close(o.outputChannel)
 	<-o.wait
