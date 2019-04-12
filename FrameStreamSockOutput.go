@@ -24,46 +24,37 @@ import (
 	"github.com/farsightsec/golang-framestream"
 )
 
-type SockOutputConfig struct {
-	Timeout       time.Duration
-	RetryInterval time.Duration
-	Dialer        *net.Dialer
-}
-
 type FrameStreamSockOutput struct {
 	outputChannel chan []byte
 	address       net.Addr
-	conf          SockOutputConfig
 	wait          chan bool
 	dialer        *net.Dialer
+	timeout       time.Duration
+	retry         time.Duration
 }
 
-func NewFrameStreamSockOutput(address net.Addr, conf *SockOutputConfig) (o *FrameStreamSockOutput, err error) {
-	o = &FrameStreamSockOutput{
+func NewFrameStreamSockOutput(address net.Addr) (*FrameStreamSockOutput, error) {
+	return &FrameStreamSockOutput{
 		outputChannel: make(chan []byte, outputChannelSize),
 		address:       address,
 		wait:          make(chan bool),
-		conf: SockOutputConfig{
-			Timeout:       10 * time.Second,
-			RetryInterval: 10 * time.Second,
-		},
+		retry:         10 * time.Second,
 		dialer: &net.Dialer{
 			Timeout: 30 * time.Second,
 		},
-	}
-	if conf != nil {
-		if conf.Timeout != 0 {
-			o.conf.Timeout = conf.Timeout
-		}
-		if conf.RetryInterval != 0 {
-			o.conf.RetryInterval = conf.RetryInterval
-		}
-		if conf.Dialer != nil {
-			o.conf.Dialer = conf.Dialer
-		}
-	}
+	}, nil
+}
 
-	return
+func (o *FrameStreamSockOutput) SetTimeout(timeout time.Duration) {
+	o.timeout = timeout
+}
+
+func (o *FrameStreamSockOutput) SetRetryInterval(retry time.Duration) {
+	o.retry = retry
+}
+
+func (o *FrameStreamSockOutput) SetDialer(dialer *net.Dialer) {
+	o.dialer = dialer
 }
 
 func (o *FrameStreamSockOutput) GetOutputChannel() chan []byte {
@@ -81,13 +72,13 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 			if err != nil {
 				log.Printf("Dial failed: %v", err)
 				c = nil
-				time.Sleep(o.conf.RetryInterval)
+				time.Sleep(o.retry)
 				continue
 			}
 			eopt := &framestream.EncoderOptions{
 				ContentType:   FSContentType,
 				Bidirectional: true,
-				Timeout:       o.conf.Timeout,
+				Timeout:       o.timeout,
 			}
 			enc, err = framestream.NewEncoder(c, eopt)
 			if err != nil {

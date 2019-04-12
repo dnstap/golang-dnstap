@@ -181,12 +181,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "dnstap: Error: invalid address: %v", err)
 			os.Exit(1)
 		}
-		sockOutput, err = dnstap.NewFrameStreamSockOutput(addr,
-			&dnstap.SockOutputConfig{Timeout: *flagTimeout})
+		sockOutput, err = dnstap.NewFrameStreamSockOutput(addr)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "dnstap: Error: failed to open socket output: %v", err)
 			os.Exit(1)
 		}
+		sockOutput.SetTimeout(*flagTimeout)
 		output = sockOutput.GetOutputChannel()
 		go sockOutput.RunOutputLoop()
 		close(outDone)
