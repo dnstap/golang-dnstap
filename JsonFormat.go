@@ -91,7 +91,7 @@ func convertJSONMessage(m *Message) jsonMessage {
 	if m.QueryZone != nil {
 		name, _, err := dns.UnpackDomainName(m.QueryZone, 0)
 		if err != nil {
-			jMsg.QueryZone = "parse failed"
+			jMsg.QueryZone = fmt.Sprintf("parse failed: %v", err)
 		} else {
 			jMsg.QueryZone = string(name)
 		}
@@ -101,7 +101,7 @@ func convertJSONMessage(m *Message) jsonMessage {
 		msg := new(dns.Msg)
 		err := msg.Unpack(m.QueryMessage)
 		if err != nil {
-			jMsg.QueryMessage = "parse failed"
+			jMsg.QueryMessage = fmt.Sprintf("parse failed: %v", err)
 		} else {
 			jMsg.QueryMessage = msg.String()
 		}
@@ -111,7 +111,7 @@ func convertJSONMessage(m *Message) jsonMessage {
 		msg := new(dns.Msg)
 		err := msg.Unpack(m.ResponseMessage)
 		if err != nil {
-			jMsg.ResponseMessage = "parse failed"
+			jMsg.ResponseMessage = fmt.Sprintf("parse failed: %v", err)
 		} else {
 			jMsg.ResponseMessage = msg.String()
 		}
