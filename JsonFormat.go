@@ -24,24 +24,24 @@ import (
 	"github.com/miekg/dns"
 )
 
-type JSONTime time.Time
+type jsonTime time.Time
 
-func (jt *JSONTime) MarshalJSON() ([]byte, error) {
+func (jt *jsonTime) MarshalJSON() ([]byte, error) {
 	stamp := time.Time(*jt).Format(time.RFC3339Nano)
 	return []byte(fmt.Sprintf("\"%s\"", stamp)), nil
 }
 
-type JSONDnstap struct {
+type jsonDnstap struct {
 	Type     string      `json:"type"`
 	Identity string      `json:"identity,omitempty"`
 	Version  string      `json:"version,omitempty"`
-	Message  JSONMessage `json:"message"`
+	Message  jsonMessage `json:"message"`
 }
 
-type JSONMessage struct {
+type jsonMessage struct {
 	Type            string    `json:"type"`
-	QueryTime       *JSONTime `json:"query_time,omitempty"`
-	ResponseTime    *JSONTime `json:"response_time,omitempty"`
+	QueryTime       *jsonTime `json:"query_time,omitempty"`
+	ResponseTime    *jsonTime `json:"response_time,omitempty"`
 	SocketFamily    string    `json:"socket_family,omitempty"`
 	SocketProtocol  string    `json:"socket_protocol,omitempty"`
 	QueryAddress    *net.IP   `json:"query_address,omitempty"`
@@ -53,20 +53,20 @@ type JSONMessage struct {
 	ResponseMessage string    `json:"response_message,omitempty"`
 }
 
-func convertJSONMessage(m *Message) JSONMessage {
-	jMsg := JSONMessage{
+func convertJSONMessage(m *Message) jsonMessage {
+	jMsg := jsonMessage{
 		Type:           fmt.Sprint(m.Type),
 		SocketFamily:   fmt.Sprint(m.SocketFamily),
 		SocketProtocol: fmt.Sprint(m.SocketProtocol),
 	}
 
 	if m.QueryTimeSec != nil && m.QueryTimeNsec != nil {
-		qt := JSONTime(time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec)).UTC())
+		qt := jsonTime(time.Unix(int64(*m.QueryTimeSec), int64(*m.QueryTimeNsec)).UTC())
 		jMsg.QueryTime = &qt
 	}
 
 	if m.ResponseTimeSec != nil && m.ResponseTimeNsec != nil {
-		rt := JSONTime(time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec)).UTC())
+		rt := jsonTime(time.Unix(int64(*m.ResponseTimeSec), int64(*m.ResponseTimeNsec)).UTC())
 		jMsg.ResponseTime = &rt
 	}
 
@@ -124,7 +124,7 @@ func convertJSONMessage(m *Message) JSONMessage {
 func JsonFormat(dt *Dnstap) (out []byte, ok bool) {
 	var s bytes.Buffer
 
-	jsonDnstap := JSONDnstap{
+	jsonDnstap := jsonDnstap{
 		Type:     fmt.Sprint(dt.Type),
 		Identity: string(dt.Identity),
 		Version:  string(dt.Version),
