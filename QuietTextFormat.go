@@ -149,7 +149,7 @@ func textConvertMessage(m *Message, s *bytes.Buffer) {
 		err = msg.Unpack(m.ResponseMessage)
 	}
 
-	if err != nil {
+	if err != nil || len(msg.Question) == 0 {
 		s.WriteString("X ")
 	} else {
 		s.WriteString("\"" + msg.Question[0].Name + "\" ")
