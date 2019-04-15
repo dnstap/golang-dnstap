@@ -45,7 +45,7 @@ var (
 	flagAppendFile = flag.Bool("a", false, "append to the given file, do not overwrite. valid only when outputting a text or YAML file.")
 	flagQuietText  = flag.Bool("q", false, "use quiet text output")
 	flagYamlText   = flag.Bool("y", false, "use verbose YAML output")
-	flagJsonText   = flag.Bool("j", false, "use verbose JSON output")
+	flagJSONText   = flag.Bool("j", false, "use verbose JSON output")
 )
 
 func usage() {
@@ -91,7 +91,7 @@ func main() {
 	}
 
 	haveFormat := false
-	for _, f := range []bool{*flagQuietText, *flagYamlText, *flagJsonText} {
+	for _, f := range []bool{*flagQuietText, *flagYamlText, *flagJSONText} {
 		if haveFormat && f {
 			fmt.Fprintf(os.Stderr, "dnstap: Error: specify at most one of -q, -y, or -j.\n")
 			os.Exit(1)
@@ -116,7 +116,7 @@ func main() {
 			format = dnstap.YamlFormat
 		case *flagQuietText:
 			format = dnstap.TextFormat
-		case *flagJsonText:
+		case *flagJSONText:
 			format = dnstap.JSONFormat
 		}
 
