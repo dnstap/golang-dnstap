@@ -117,7 +117,7 @@ func main() {
 		case *flagQuietText:
 			format = dnstap.TextFormat
 		case *flagJsonText:
-			format = dnstap.JsonFormat
+			format = dnstap.JSONFormat
 		}
 
 		o, err := newFileOutput(*flagWriteFile, format, *flagAppendFile)
