@@ -124,14 +124,16 @@ func convertJSONMessage(m *Message) jsonMessage {
 func JSONFormat(dt *Dnstap) (out []byte, ok bool) {
 	var s bytes.Buffer
 
-	jsonDnstap := jsonDnstap{
+	j, err := json.Marshal(jsonDnstap{
 		Type:     fmt.Sprint(dt.Type),
 		Identity: string(dt.Identity),
 		Version:  string(dt.Version),
 		Message:  convertJSONMessage(dt.Message),
+	})
+	if err != nil {
+		return nil, false
 	}
 
-	j, _ := json.Marshal(jsonDnstap)
 	s.WriteString(string(j) + "\n")
 
 	return s.Bytes(), true
