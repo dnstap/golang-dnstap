@@ -1,0 +1,157 @@
+.TH dnstap 8
+
+.SH NAME
+
+dnstap \- Capture, display, and relay Dnstap data.
+
+.SH SYNOPSIS
+
+.B dnstap [ -u \fIsocket-path\fB [ -u \fIsocket2-path\fB ... ] ]
+.br
+.B "	  [ -l \fIhost:port\fB [ -l \fIhost2:port2\fB ... ] ]"
+.br
+.B "	  [ -r \fIfile\fB [ -r \ffile2\fB ... ] ]"
+.br
+.B "	  [ -U \fIsocket-path\fB [ -U \fIsocket2-path\fB ... ] ]"
+.br
+.B "	  [ -T \fIhost:port\fB [ -T \fIhost2:port2\fB ... ] ]"
+.br
+.B "	  [ -w \fIfile\fB ] [ -q | -y | -j ] [-a]"
+.br
+.B "	  [ -t \fItimeout\fB ]"
+.br
+
+.SH DESCRIPTION
+
+.B dnstap
+reads data in the Dnstap export format from Frame Streams files or
+receives data on Frame Streams connections to TCP/IP or unix domain
+socket addresses.
+.B dnstap
+can display this data in a compact text (the default), JSON, or YAML
+formats. It can also save data to a file in display or Frame Streams
+binary fromat, or relay the data to other Dnstap processes over unix
+domain socket or TCP/IP connections.
+
+.SH OPTIONS
+
+.TP
+.B -a
+When opening an file (\fB-w\fR) for text format output 
+(\fB-j\fR, \fB-q\fR, or \fB-y\fR), append to the file rather
+truncating.
+
+.B -a
+does not apply when writing binary Frame Streams data to a file.
+
+.TP
+.B -j
+Write data in JSON format. Encapsulated DNS messages are
+rendered in text form similar to the output of \fBdig(1)\fR.
+
+At most one text format (\fB-j\fR, \fB-q\fR, or \fB-y\fR) option may be
+given.
+
+.TP
+.B -l \fIhost:port\fR
+Listen for Dnstap data on TCP/IP port \fBport\fR on address \fIhost\fR.
+
+The \fB-l\fR option may be given multiple times to listen on  multiple
+addresses.
+
+At least one input (\fB-l\fR, \fB-r\fR, or \fB-u\fR) option must be given.
+
+.TP
+.B -q
+Write or display data in compact (quiet) text format.
+
+At most one text format (\fB-j\fR, \fB-q\fR, or \fB-y\fR) option may be given.
+
+.TP
+.B -r \fIfile\fR
+Read Dnstap data from the given \fIfile\fR. The \fB-r\fR option
+may be given multiple times to read from multiple files.
+
+At least one input (\fB-l\fR, \fB-r\fR, or \fB-u\fR) option must be given.
+
+.TP
+.B -T \fIhost:port\fR
+Relay Dnstap data over a TCP/IP connection to \fIhost:port\fR.
+\fBdnstap\fR will establish or re-establish this connection as needed.
+
+The \fB-T\fR option may be given multiple times to relay Dnstap data
+to multiple addresses.
+
+.TP
+.B -t \fItimeout\fR
+Apply i/o \fItimeout\fR to TCP/IP and unix domain socket
+connections. \fItimeout\fR is given as a number followed by a unit
+abbreviation (e.g., \fIms\fR for milliseconds, \fIs\fR for seconds,
+\fIm\fR for minutes).
+
+.TP
+.B -u \fIsocket-path\fR
+Listen for Dnstap data on the unix domain socket at
+\fIsocket-path\fR. \fBdnstap\fR will remove any file or socket
+\fIsocket-path\fR before listening.
+
+The \fB-u\fR option may be given multiple times to listen on multiple
+socket paths.
+
+At least one input (\fB-l\fR, \fB-r\fR, or \fB-u\fR) option must be given.
+
+.TP
+.B -U \fIsocket-path\fR
+Relay Dnstap data over a unix domain socket connection to
+\fIsocket-path\fR. \fBdnstap\fR will establish or re-establish this
+connection as needed.
+
+The \fB-U\fR option may be given multiple times to relay Dnstap data to
+multiple socket paths.
+
+
+.TP
+.B -w \fIfile\fR
+Write Dnstap data to \fIfile\fR.
+
+If \fIfile\fR is "-" or no \fB-w\fR, \fB-T\fR, or \fB-U\fR output
+options are present, data will be written to standard output in quiet
+text format (\fB-q\fR), unless the YAML or JSON format is specified
+with the \fB-y\fR or \fB-j\fR options, respectively.
+
+If \fIfile\fR is a filename other than "-", Dnstap data is written to the
+named file in Frame Streams binary format by default, unless quiet text,
+JSON, or YAML formats are specified.
+
+.B dnstap
+will reopen \fIfile\fR on \fBSIGHUP\fR, for file rotation purposes.
+
+
+.TP
+.B -y
+Write Dnstap output in YAML format. Encapsulated DNS messages are rendered in text
+form similar to the outpu tof \fBdig(1)\fR.
+
+At most one text format (\fB-j\fR, \fB-q\fR, or \fB-y\fR) option may be given.
+
+
+.SH EXAMPLES
+
+Listen for Dnstap data from a local name server and print quiet text format
+to standard ouptut.
+
+.nf
+	dnstap -u /var/named/dnstap.sock
+.fi
+
+Listen for Dnstap data from a local name server, save a local binary copy, and
+relay it to a remote host over TCP.
+
+.nf
+	dnstap -u /usr/local/unbound/dnstap.sock -w dnstap.fstrm \\
+		-T dns-admin.example.com:5353
+.fi
+
+.SH SEE ALSO
+
+.B dig(1)
