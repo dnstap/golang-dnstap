@@ -25,6 +25,19 @@ import (
 	"github.com/farsightsec/golang-framestream"
 )
 
+// MaxPayloadSize sets the upper limit on input Dnstap payload sizes. If an Input
+// receives a Dnstap payload over this size limit, ReadInto will log an error and
+// return.
+//
+// EDNS0 and DNS over TCP use 2 octets for DNS message size, imposing a maximum
+// size of 65535 octets for the DNS message, which is the bulk of the data carried
+// in a Dnstap message. Protobuf encoding overhead and metadata with some size
+// guidance (e.g., identity and version being DNS strings, which have a maximum
+// length of 255) add up to less than 1KB. The default 96KiB size of the buffer
+// allows a bit over 30KB space for "extra" metadata.
+//
+var MaxPayloadSize uint32 = 96 * 1024
+
 // A FrameStreamInput reads dnstap data from an io.ReadWriter.
 type FrameStreamInput struct {
 	wait    chan bool
@@ -45,9 +58,10 @@ func NewFrameStreamInput(r io.ReadWriter, bi bool) (input *FrameStreamInput, err
 func NewFrameStreamInputTimeout(r io.ReadWriter, bi bool, timeout time.Duration) (input *FrameStreamInput, err error) {
 	input = new(FrameStreamInput)
 	decoderOptions := framestream.DecoderOptions{
-		ContentType:   FSContentType,
-		Bidirectional: bi,
-		Timeout:       timeout,
+		MaxPayloadSize: MaxPayloadSize,
+		ContentType:    FSContentType,
+		Bidirectional:  bi,
+		Timeout:        timeout,
 	}
 	input.decoder, err = framestream.NewDecoder(r, &decoderOptions)
 	if err != nil {
