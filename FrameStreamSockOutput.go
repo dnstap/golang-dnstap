@@ -33,6 +33,7 @@ type FrameStreamSockOutput struct {
 	dialer        *net.Dialer
 	timeout       time.Duration
 	retry         time.Duration
+	flushTimeout  time.Duration
 }
 
 // NewFrameStreamSockOutput creates a FrameStreamSockOutput manaaging a
@@ -43,6 +44,7 @@ func NewFrameStreamSockOutput(address net.Addr) (*FrameStreamSockOutput, error) 
 		address:       address,
 		wait:          make(chan bool),
 		retry:         10 * time.Second,
+		flushTimeout:  5 * time.Second,
 		dialer: &net.Dialer{
 			Timeout: 30 * time.Second,
 		},
@@ -54,6 +56,14 @@ func NewFrameStreamSockOutput(address net.Addr) (*FrameStreamSockOutput, error) 
 // connection. The default timeout is zero, for no timeout.
 func (o *FrameStreamSockOutput) SetTimeout(timeout time.Duration) {
 	o.timeout = timeout
+}
+
+// SetFlushTimeout sets the maximum time data will be kept in the output
+// buffer.
+//
+// The default flush timeout is five seconds.
+func (o *FrameStreamSockOutput) SetFlushTimeout(timeout time.Duration) {
+	o.flushTimeout = timeout
 }
 
 // SetRetryInterval specifies how long the FrameStreamSockOutput will wait
@@ -82,6 +92,46 @@ func (o *FrameStreamSockOutput) GetOutputChannel() chan []byte {
 	return o.outputChannel
 }
 
+// A timedConn resets an associated timer on each Write to the underlying
+// connection, and is used to implement the output's flush timeout.
+type timedConn struct {
+	net.Conn
+	timer   *time.Timer
+	timeout time.Duration
+
+	// idle is true if the timer has fired and we have consumed
+	// the time from its channel. We use this to prevent deadlocking
+	// when resetting or stopping an already fired timer.
+	idle bool
+}
+
+// SetIdle informs the timedConn that the associated timer is idle, i.e.
+// it has fired and has not been reset.
+func (t *timedConn) SetIdle() {
+	t.idle = true
+}
+
+// Stop stops the underlying timer, consuming any time value if the timer
+// had fired before Stop was called.
+func (t *timedConn) StopTimer() {
+	if !t.timer.Stop() && !t.idle {
+		<-t.timer.C
+	}
+	t.idle = true
+}
+
+func (t *timedConn) Write(b []byte) (int, error) {
+	t.StopTimer()
+	t.timer.Reset(t.timeout)
+	t.idle = false
+	return t.Conn.Write(b)
+}
+
+func (t *timedConn) Close() error {
+	t.StopTimer()
+	return t.Conn.Close()
+}
+
 // RunOutputLoop reads data from the output channel and sends it over
 // a connections to the FrameStreamSockOutput's address, establishing
 // the connection as needed.
@@ -89,55 +139,75 @@ func (o *FrameStreamSockOutput) GetOutputChannel() chan []byte {
 // RunOutputLoop satisifes the dnstap Output interface.
 func (o *FrameStreamSockOutput) RunOutputLoop() {
 	var enc *framestream.Encoder
-	var c net.Conn
-	var err error
 
-	for frame := range o.outputChannel {
-		for enc == nil {
-			c, err = o.dialer.Dial(o.address.Network(), o.address.String())
-			if err != nil {
-				log.Printf("Dial failed: %v", err)
-				c = nil
-				time.Sleep(o.retry)
+	// Start with the connection flush timer in a stopped state.
+	// It will be reset by the first Write call on a new connection.
+	conn := &timedConn{
+		timer:   time.NewTimer(0),
+		timeout: o.flushTimeout,
+	}
+	conn.StopTimer()
+
+	defer func() {
+		if enc != nil {
+			enc.Flush()
+			enc.Close()
+		}
+		if conn != nil {
+			conn.Close()
+		}
+		close(o.wait)
+	}()
+
+	for {
+		select {
+		case frame, ok := <-o.outputChannel:
+			if !ok {
+				return
+			}
+			for enc == nil {
+				c, err := o.dialer.Dial(o.address.Network(), o.address.String())
+				if err != nil {
+					log.Printf("Dial failed: %v", err)
+					time.Sleep(o.retry)
+					continue
+				}
+				conn.Conn = c
+				eopt := &framestream.EncoderOptions{
+					ContentType:   FSContentType,
+					Bidirectional: true,
+					Timeout:       o.timeout,
+				}
+				enc, err = framestream.NewEncoder(conn, eopt)
+				if err != nil {
+					log.Printf("framestream.NewEncoder() failed: %v\n", err)
+					conn.Close()
+					enc = nil
+					continue
+				}
+			}
+
+			if _, err := enc.Write(frame); err != nil {
+				log.Printf("framestream.Encoder.Write() failed: %s\n", err)
+				enc.Close()
+				conn.Close()
+				enc = nil
+			}
+
+		case <-conn.timer.C:
+			conn.SetIdle()
+			if enc == nil {
 				continue
 			}
-			eopt := &framestream.EncoderOptions{
-				ContentType:   FSContentType,
-				Bidirectional: true,
-				Timeout:       o.timeout,
-			}
-			enc, err = framestream.NewEncoder(c, eopt)
-			if err != nil {
-				log.Printf("framestream.NewEncoder() failed: %v\n", err)
-				if c != nil {
-					c.Close()
-					c = nil
-				}
+			if err := enc.Flush(); err != nil {
+				log.Printf("framestream.Encoder.Flush() failed: %s\n", err)
+				enc.Close()
+				conn.Close()
 				enc = nil
 				continue
 			}
 		}
-
-		if _, err := enc.Write(frame); err != nil {
-			log.Printf("framestream.Encoder.Write() failed: %s\n", err)
-			enc.Close()
-			enc = nil
-			c.Close()
-			c = nil
-		}
-		if err := enc.Flush(); err != nil {
-			log.Printf("framestream.Encoder.Flush() failed: %s\n", err)
-			enc.Close()
-			enc = nil
-			c.Close()
-			c = nil
-		}
 	}
-	if enc != nil {
-		enc.Close()
-		c.Close()
-	}
-	close(o.wait)
 }
 
 // Close shuts down the FrameStreamSockOutput's output channel and returns

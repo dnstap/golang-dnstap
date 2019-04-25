@@ -33,6 +33,7 @@ func dialAndSend(t *testing.T, network, address string) *FrameStreamSockOutput {
 
 		o.SetDialer(&net.Dialer{Timeout: time.Second})
 		o.SetTimeout(time.Second)
+		o.SetFlushTimeout(100 * time.Millisecond)
 		o.SetRetryInterval(time.Second)
 
 		outputChan <- o
