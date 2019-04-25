@@ -99,3 +99,88 @@ func TestReconnect(t *testing.T) {
 	readOne(t, out)
 	readOne(t, out)
 }
+
+func BenchmarkConnectUnidirectional(b *testing.B) {
+	b.StopTimer()
+	l, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	outch := make(chan []byte, 32)
+	go func() {
+		s, err := l.Accept()
+		if err != nil {
+			b.Fatal(err)
+		}
+		in, err := NewFrameStreamInput(s, false)
+		if err != nil {
+			b.Fatal(err)
+		}
+		go in.ReadInto(outch)
+	}()
+
+	readDone := make(chan struct{})
+	go func(n int) {
+		<-outch
+		b.StartTimer()
+		for i := 1; i < n; i++ {
+			if len(<-outch) == 0 {
+				b.Error("output channel prematurely closed")
+				break
+			}
+		}
+		close(readDone)
+	}(b.N)
+
+	c, err := net.Dial(l.Addr().Network(), l.Addr().String())
+	if err != nil {
+		b.Fatal(err)
+	}
+	out, err := NewFrameStreamOutput(c)
+	if err != nil {
+		b.Fatal(err)
+	}
+	go out.RunOutputLoop()
+	for i := 0; i < b.N; i++ {
+		out.GetOutputChannel() <- []byte("frame")
+	}
+	out.Close()
+	<-readDone
+}
+
+func BenchmarkConnectBidirectional(b *testing.B) {
+	b.StopTimer()
+	l, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	in := NewFrameStreamSockInput(l)
+	outch := make(chan []byte, 32)
+	go in.ReadInto(outch)
+
+	readDone := make(chan struct{})
+	go func(n int) {
+		<-outch
+		b.StartTimer()
+		for i := 1; i < n; i++ {
+			if len(<-outch) == 0 {
+				b.Error("output channel prematurely closed")
+				break
+			}
+		}
+		close(readDone)
+	}(b.N)
+
+	out, err := NewFrameStreamSockOutput(l.Addr())
+	if err != nil {
+		b.Fatal(err)
+	}
+	go out.RunOutputLoop()
+	for i := 0; i < b.N; i++ {
+		out.GetOutputChannel() <- []byte("frame")
+	}
+	out.Close()
+	<-readDone
+}
