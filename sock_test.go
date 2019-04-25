@@ -45,6 +45,7 @@ func dialAndSend(t *testing.T, network, address string) *FrameStreamSockOutput {
 	}
 
 	go out.RunOutputLoop()
+	<-time.After(500 * time.Millisecond)
 	out.GetOutputChannel() <- []byte("frame")
 	return out
 }
