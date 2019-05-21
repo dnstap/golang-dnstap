@@ -22,28 +22,15 @@ func dialAndSend(t *testing.T, network, address string) *FrameStreamSockOutput {
 		t.Fatal(err)
 	}
 
-	var out *FrameStreamSockOutput
-	outputChan := make(chan *FrameStreamSockOutput)
-
-	go func() {
-		o, err := NewFrameStreamSockOutput(addr)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		o.SetDialer(&net.Dialer{Timeout: time.Second})
-		o.SetTimeout(time.Second)
-		o.SetFlushTimeout(100 * time.Millisecond)
-		o.SetRetryInterval(time.Second)
-
-		outputChan <- o
-	}()
-
-	select {
-	case out = <-outputChan:
-	case <-time.After(time.Second):
-		t.Fatal("can't create a new encoder")
+	out, err := NewFrameStreamSockOutput(addr)
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	out.SetDialer(&net.Dialer{Timeout: time.Second})
+	out.SetTimeout(time.Second)
+	out.SetFlushTimeout(100 * time.Millisecond)
+	out.SetRetryInterval(time.Second)
 
 	go out.RunOutputLoop()
 	<-time.After(500 * time.Millisecond)
