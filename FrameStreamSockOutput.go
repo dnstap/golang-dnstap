@@ -183,6 +183,7 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 					log.Printf("framestream.NewEncoder() failed: %v\n", err)
 					conn.Close()
 					enc = nil
+					time.Sleep(o.retry)
 					continue
 				}
 			}
@@ -192,6 +193,7 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 				enc.Close()
 				conn.Close()
 				enc = nil
+				time.Sleep(o.retry)
 			}
 
 		case <-conn.timer.C:
@@ -204,7 +206,7 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 				enc.Close()
 				conn.Close()
 				enc = nil
-				continue
+				time.Sleep(o.retry)
 			}
 		}
 	}
