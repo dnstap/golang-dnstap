@@ -10,7 +10,7 @@ dnstap \- Capture, display, and relay Dnstap data.
 .br
 .B "	  [ -l \fIhost:port\fB [ -l \fIhost2:port2\fB ... ] ]"
 .br
-.B "	  [ -r \fIfile\fB [ -r \ffile2\fB ... ] ]"
+.B "	  [ -r \fIfile\fB [ -r \fIfile2\fB ... ] ]"
 .br
 .B "	  [ -U \fIsocket-path\fB [ -U \fIsocket2-path\fB ... ] ]"
 .br
@@ -30,7 +30,7 @@ socket addresses.
 .B dnstap
 can display this data in a compact text (the default), JSON, or YAML
 formats. It can also save data to a file in display or Frame Streams
-binary fromat, or relay the data to other Dnstap processes over unix
+binary format, or relay the data to other Dnstap processes over unix
 domain socket or TCP/IP connections.
 
 .SH OPTIONS
@@ -56,7 +56,7 @@ given.
 .B -l \fIhost:port\fR
 Listen for Dnstap data on TCP/IP port \fBport\fR on address \fIhost\fR.
 
-The \fB-l\fR option may be given multiple times to listen on  multiple
+The \fB-l\fR option may be given multiple times to listen on multiple
 addresses.
 
 At least one input (\fB-l\fR, \fB-r\fR, or \fB-u\fR) option must be given.
@@ -130,7 +130,7 @@ will reopen \fIfile\fR on \fBSIGHUP\fR, for file rotation purposes.
 .TP
 .B -y
 Write Dnstap output in YAML format. Encapsulated DNS messages are rendered in text
-form similar to the outpu tof \fBdig(1)\fR.
+form similar to the output of \fBdig(1)\fR.
 
 At most one text format (\fB-j\fR, \fB-q\fR, or \fB-y\fR) option may be given.
 
@@ -138,7 +138,7 @@ At most one text format (\fB-j\fR, \fB-q\fR, or \fB-y\fR) option may be given.
 .SH EXAMPLES
 
 Listen for Dnstap data from a local name server and print quiet text format
-to standard ouptut.
+to standard output.
 
 .nf
 	dnstap -u /var/named/dnstap.sock
