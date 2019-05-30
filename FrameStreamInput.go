@@ -21,8 +21,6 @@ import (
 	"log"
 	"os"
 	"time"
-
-	"github.com/farsightsec/golang-framestream"
 )
 
 // MaxPayloadSize sets the upper limit on input Dnstap payload sizes. If an Input
@@ -40,9 +38,8 @@ var MaxPayloadSize uint32 = 96 * 1024
 
 // A FrameStreamInput reads dnstap data from an io.ReadWriter.
 type FrameStreamInput struct {
-	wait    chan bool
-	decoder *framestream.Decoder
-	timeout time.Duration
+	wait   chan bool
+	reader *Reader
 }
 
 // NewFrameStreamInput creates a FrameStreamInput reading data from the given
@@ -56,19 +53,19 @@ func NewFrameStreamInput(r io.ReadWriter, bi bool) (input *FrameStreamInput, err
 // given io.ReadWriter with a timeout applied to reading and (for bidirectional
 // inputs) writing control messages.
 func NewFrameStreamInputTimeout(r io.ReadWriter, bi bool, timeout time.Duration) (input *FrameStreamInput, err error) {
-	input = new(FrameStreamInput)
-	decoderOptions := framestream.DecoderOptions{
-		MaxPayloadSize: MaxPayloadSize,
-		ContentType:    FSContentType,
-		Bidirectional:  bi,
-		Timeout:        timeout,
-	}
-	input.decoder, err = framestream.NewDecoder(r, &decoderOptions)
+	reader, err := NewReader(r, &ReaderOptions{
+		Bidirectional: bi,
+		Timeout:       timeout,
+	})
+
 	if err != nil {
-		return
+		return nil, err
 	}
-	input.wait = make(chan bool)
-	return
+
+	return &FrameStreamInput{
+		wait:   make(chan bool),
+		reader: reader,
+	}, nil
 }
 
 // NewFrameStreamInputFromFilename creates a FrameStreamInput reading from
@@ -86,17 +83,21 @@ func NewFrameStreamInputFromFilename(fname string) (input *FrameStreamInput, err
 //
 // ReadInto satisfies the dnstap Input interface.
 func (input *FrameStreamInput) ReadInto(output chan []byte) {
+	buf := make([]byte, MaxPayloadSize)
 	for {
-		buf, err := input.decoder.Decode()
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("framestream.Decoder.Decode() failed: %s\n", err)
-			}
-			break
+		n, err := input.reader.Read(buf)
+		if err == nil {
+			newbuf := make([]byte, n)
+			copy(newbuf, buf)
+			output <- newbuf
+			continue
 		}
-		newbuf := make([]byte, len(buf))
-		copy(newbuf, buf)
-		output <- newbuf
+
+		if err != io.EOF {
+			log.Printf("framestream Read error: %v", err)
+		}
+
+		break
 	}
 	close(input.wait)
 }
