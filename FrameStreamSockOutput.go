@@ -17,6 +17,7 @@
 package dnstap
 
 import (
+	"sync"
 	"log"
 	"net"
 	"time"
@@ -92,44 +93,40 @@ func (o *FrameStreamSockOutput) GetOutputChannel() chan []byte {
 	return o.outputChannel
 }
 
-// A timedConn resets an associated timer on each Write to the underlying
-// connection, and is used to implement the output's flush timeout.
-type timedConn struct {
-	net.Conn
-	timer   *time.Timer
-	timeout time.Duration
-
-	// idle is true if the timer has fired and we have consumed
-	// the time from its channel. We use this to prevent deadlocking
-	// when resetting or stopping an already fired timer.
-	idle bool
+type timedEnc struct {
+	mutex     sync.Mutex
+	enc      *framestream.Encoder
+	lastwrite int64 // from nanotime()
+	stop      bool
 }
 
-// SetIdle informs the timedConn that the associated timer is idle, i.e.
-// it has fired and has not been reset.
-func (t *timedConn) SetIdle() {
-	t.idle = true
-}
+func (t *timedEnc) RunTimeoutLoop(timeout time.Duration) {
+	for {
+		time.Sleep(timeout)
 
-// Stop stops the underlying timer, consuming any time value if the timer
-// had fired before Stop was called.
-func (t *timedConn) StopTimer() {
-	if !t.timer.Stop() && !t.idle {
-		<-t.timer.C
+		t.mutex.Lock()
+		switch {
+		case t.stop:
+			return
+		case t.enc == nil || t.lastwrite == 0:
+			// nothing to do, skip
+		case nanotime() >= t.lastwrite + int64(timeout):
+			t.enc.Flush()
+			t.lastwrite = 0
+		}
+		t.mutex.Unlock()
 	}
-	t.idle = true
 }
 
-func (t *timedConn) Write(b []byte) (int, error) {
-	t.StopTimer()
-	t.timer.Reset(t.timeout)
-	t.idle = false
-	return t.Conn.Write(b)
-}
-
-func (t *timedConn) Close() error {
-	t.StopTimer()
-	return t.Conn.Close()
+func (t *timedEnc) Stop() {
+	t.mutex.Lock()
+	if t.enc != nil {
+		t.enc.Flush()
+		t.enc.Close()
+		t.enc = nil
+	}
+	t.stop = true
+	t.mutex.Unlock()
 }
 
 // RunOutputLoop reads data from the output channel and sends it over
@@ -138,86 +135,60 @@ func (t *timedConn) Close() error {
 //
 // RunOutputLoop satisifes the dnstap Output interface.
 func (o *FrameStreamSockOutput) RunOutputLoop() {
-	var enc *framestream.Encoder
+	var tenc timedEnc
+	var conn net.Conn
 	var err error
 
-	// Start with the connection flush timer in a stopped state.
-	// It will be reset by the first Write call on a new connection.
-	conn := &timedConn{
-		timer:   time.NewTimer(0),
-		timeout: o.flushTimeout,
-	}
-	conn.StopTimer()
+	go tenc.RunTimeoutLoop(o.flushTimeout)
 
-	defer func() {
-		if enc != nil {
-			enc.Flush()
-			enc.Close()
-		}
-		if conn != nil {
-			conn.Close()
-		}
-		close(o.wait)
-	}()
+	for frame := range o.outputChannel {
+		tenc.mutex.Lock()
 
-	for {
-		select {
-		case frame, ok := <-o.outputChannel:
-			if !ok {
-				return
-			}
-
-			// the retry loop
-			for ;; time.Sleep(o.retry) {
-				if enc == nil {
-					// connect the socket
-					conn.Conn, err = o.dialer.Dial(o.address.Network(), o.address.String())
-					if err != nil {
-						log.Printf("Dial() failed: %v", err)
-						continue // = retry
-					}
-
-					// create the encoder
-					eopt := framestream.EncoderOptions{
-						ContentType:   FSContentType,
-						Bidirectional: true,
-						Timeout:       o.timeout,
-					}
-					enc, err = framestream.NewEncoder(conn, &eopt)
-					if err != nil {
-						log.Printf("framestream.NewEncoder() failed: %v", err)
-						conn.Close()
-						enc = nil
-						continue // = retry
-					}
+		for ;; time.Sleep(o.retry) {
+			// need to connect to the remote endpoint?
+			if tenc.enc == nil {
+				conn, err = o.dialer.Dial(o.address.Network(), o.address.String())
+				if err != nil {
+					log.Printf("Dial() failed: %v", err)
+					continue
 				}
 
-				// try writing
-				if _, err = enc.Write(frame); err != nil {
-					log.Printf("framestream.Encoder.Write() failed: %v", err)
-					enc.Close()
-					enc = nil
+				tenc.enc, err = framestream.NewEncoder(conn, &framestream.EncoderOptions{
+					ContentType:   FSContentType,
+					Bidirectional: true,
+					Timeout:       o.timeout,
+				})
+				if err != nil {
+					log.Printf("framestream.NewEncoder() failed: %v", err)
 					conn.Close()
-					continue // = retry
+					tenc.enc = nil
+					continue
 				}
-
-				break // success!
 			}
 
-		case <-conn.timer.C:
-			conn.SetIdle()
-			if enc == nil {
+			// try writing
+			if _, err = tenc.enc.Write(frame); err != nil {
+				log.Printf("framestream.Encoder.Write() failed: %v", err)
+				tenc.enc.Close()
+				tenc.enc = nil
+				conn.Close()
 				continue
 			}
-			if err := enc.Flush(); err != nil {
-				log.Printf("framestream.Encoder.Flush() failed: %s", err)
-				enc.Close()
-				enc = nil
-				conn.Close()
-				time.Sleep(o.retry)
-			}
+
+			// success
+			tenc.lastwrite = nanotime()
+			break
 		}
+
+		tenc.mutex.Unlock()
 	}
+
+	// cleanup
+	tenc.Stop()
+	if conn != nil {
+		conn.Close()
+	}
+	close(o.wait)
 }
 
 // Close shuts down the FrameStreamSockOutput's output channel and returns
