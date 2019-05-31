@@ -139,6 +139,7 @@ func (t *timedConn) Close() error {
 // RunOutputLoop satisifes the dnstap Output interface.
 func (o *FrameStreamSockOutput) RunOutputLoop() {
 	var enc *framestream.Encoder
+	var err error
 
 	// Start with the connection flush timer in a stopped state.
 	// It will be reset by the first Write call on a new connection.
@@ -165,35 +166,42 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 			if !ok {
 				return
 			}
-			for enc == nil {
-				c, err := o.dialer.Dial(o.address.Network(), o.address.String())
-				if err != nil {
-					log.Printf("Dial failed: %v", err)
-					time.Sleep(o.retry)
-					continue
-				}
-				conn.Conn = c
-				eopt := &framestream.EncoderOptions{
-					ContentType:   FSContentType,
-					Bidirectional: true,
-					Timeout:       o.timeout,
-				}
-				enc, err = framestream.NewEncoder(conn, eopt)
-				if err != nil {
-					log.Printf("framestream.NewEncoder() failed: %v\n", err)
-					conn.Close()
-					enc = nil
-					time.Sleep(o.retry)
-					continue
-				}
-			}
 
-			if _, err := enc.Write(frame); err != nil {
-				log.Printf("framestream.Encoder.Write() failed: %s\n", err)
-				enc.Close()
-				conn.Close()
-				enc = nil
-				time.Sleep(o.retry)
+			// the retry loop
+			for ;; time.Sleep(o.retry) {
+				if enc == nil {
+					// connect the socket
+					conn.Conn, err = o.dialer.Dial(o.address.Network(), o.address.String())
+					if err != nil {
+						log.Printf("Dial() failed: %v", err)
+						continue // = retry
+					}
+
+					// create the encoder
+					eopt := framestream.EncoderOptions{
+						ContentType:   FSContentType,
+						Bidirectional: true,
+						Timeout:       o.timeout,
+					}
+					enc, err = framestream.NewEncoder(conn, &eopt)
+					if err != nil {
+						log.Printf("framestream.NewEncoder() failed: %v", err)
+						conn.Close()
+						enc = nil
+						continue // = retry
+					}
+				}
+
+				// try writing
+				if _, err = enc.Write(frame); err != nil {
+					log.Printf("framestream.Encoder.Write() failed: %v", err)
+					enc.Close()
+					enc = nil
+					conn.Close()
+					continue // = retry
+				}
+
+				break // success!
 			}
 
 		case <-conn.timer.C:
@@ -202,10 +210,10 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 				continue
 			}
 			if err := enc.Flush(); err != nil {
-				log.Printf("framestream.Encoder.Flush() failed: %s\n", err)
+				log.Printf("framestream.Encoder.Flush() failed: %s", err)
 				enc.Close()
-				conn.Close()
 				enc = nil
+				conn.Close()
 				time.Sleep(o.retry)
 			}
 		}
