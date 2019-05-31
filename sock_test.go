@@ -96,32 +96,48 @@ func BenchmarkConnectUnidirectional(b *testing.B) {
 		b.Fatal(err)
 	}
 
+	// read from tcp socket into outch
 	outch := make(chan []byte, 32)
 	go func() {
+		// wait for connection
 		s, err := l.Accept()
 		if err != nil {
-			b.Fatal(err)
+			b.Error(err)
+			close(outch)
+			return
 		}
+
+		// start rewriter
 		in, err := NewFrameStreamInput(s, false)
 		if err != nil {
-			b.Fatal(err)
+			b.Error(err)
+			close(outch)
+			return
 		}
-		go in.ReadInto(outch)
+
+		// read ASAP into outch
+		in.ReadInto(outch)
+		close(outch)
 	}()
 
+	// read from outch exactly b.N frames
+	// this is separate from the above, because the process of rewriting tcp into outch
+	// must run in parallel with reading b.N frames from outch
 	readDone := make(chan struct{})
-	go func(n int) {
+	go func() {
+		// wait for the first frame before starting the timer
 		<-outch
+		i := 1
+
 		b.StartTimer()
-		for i := 1; i < n; i++ {
-			if len(<-outch) == 0 {
-				b.Error("output channel prematurely closed")
-				break
-			}
+		for _ = range outch { i++ }
+		if i != b.N {	
+			b.Error("invalid frame count")
 		}
 		close(readDone)
-	}(b.N)
+	}()
 
+	// connect to tcp socket and start the output loop
 	c, err := net.Dial(l.Addr().Network(), l.Addr().String())
 	if err != nil {
 		b.Fatal(err)
@@ -131,10 +147,14 @@ func BenchmarkConnectUnidirectional(b *testing.B) {
 		b.Fatal(err)
 	}
 	go out.RunOutputLoop()
+
+	// write to the output channel exactly b.N frames
 	for i := 0; i < b.N; i++ {
 		out.GetOutputChannel() <- []byte("frame")
 	}
 	out.Close()
+
+	// wait for the reader
 	<-readDone
 }
 
@@ -145,31 +165,33 @@ func BenchmarkConnectBidirectional(b *testing.B) {
 		b.Fatal(err)
 	}
 
+	// start an infinite tcp socket reader
 	in := NewFrameStreamSockInput(l)
 	outch := make(chan []byte, 32)
 	go in.ReadInto(outch)
 
+	// read up to b.N frames in background
 	readDone := make(chan struct{})
-	go func(n int) {
+	go func() {
 		<-outch
 		b.StartTimer()
-		for i := 1; i < n; i++ {
-			if len(<-outch) == 0 {
-				b.Error("output channel prematurely closed")
-				break
-			}
-		}
+		for i := 1; i < b.N; i++ { <-outch } // NB: read never fails
 		close(readDone)
-	}(b.N)
+	}()
 
+	// connect to tcp socket and start the output loop
 	out, err := NewFrameStreamSockOutput(l.Addr())
 	if err != nil {
 		b.Fatal(err)
 	}
 	go out.RunOutputLoop()
+
+	// write to the output channel exactly b.N frames
 	for i := 0; i < b.N; i++ {
 		out.GetOutputChannel() <- []byte("frame")
 	}
 	out.Close()
+
+	// wait for the reader
 	<-readDone
 }
