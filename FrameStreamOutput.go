@@ -18,7 +18,6 @@ package dnstap
 
 import (
 	"io"
-	"log"
 	"os"
 )
 
@@ -27,6 +26,7 @@ type FrameStreamOutput struct {
 	outputChannel chan []byte
 	wait          chan bool
 	w             *Writer
+	log           Logger
 }
 
 // NewFrameStreamOutput creates a FrameStreamOutput writing dnstap data to
@@ -57,6 +57,12 @@ func NewFrameStreamOutputFromFilename(fname string) (o *FrameStreamOutput, err e
 	return NewFrameStreamOutput(w)
 }
 
+// SetLogger sets an alternate logger for the FrameStreamOutput. The default
+// is no logging.
+func (o *FrameStreamOutput) SetLogger(logger Logger) {
+	o.log = logger
+}
+
 // GetOutputChannel returns the channel on which the FrameStreamOutput accepts
 // data.
 //
@@ -68,14 +74,15 @@ func (o *FrameStreamOutput) GetOutputChannel() chan []byte {
 // RunOutputLoop processes data received on the channel returned by
 // GetOutputChannel, returning after the CLose method is called.
 // If there is an error writing to the Output's writer, RunOutputLoop()
-// logs a fatal error exits the program.
+// returns, logging an error if a logger is configured with SetLogger()
 //
 // RunOutputLoop satisfies the dnstap Output interface.
 func (o *FrameStreamOutput) RunOutputLoop() {
 	for frame := range o.outputChannel {
 		if _, err := o.w.Write(frame); err != nil {
-			log.Fatalf("framestream Write failed: %v\n", err)
-			break
+			o.log.Printf("FrameStreamOutput: Write error: %v, returning", err)
+			close(o.wait)
+			return
 		}
 	}
 	close(o.wait)

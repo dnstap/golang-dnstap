@@ -38,3 +38,11 @@ type Output interface {
 	RunOutputLoop()
 	Close()
 }
+
+type Logger interface {
+	Printf(format string, v ...interface{})
+}
+
+type nullLogger struct{}
+
+func (n nullLogger) Printf(format string, v ...interface{}) {}

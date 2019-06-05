@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+type testLogger struct{ *testing.T }
+
+func (t *testLogger) Printf(format string, v ...interface{}) {
+	t.Helper()
+	t.Logf(format, v...)
+}
+
 func dialAndSend(t *testing.T, network, address string) *FrameStreamSockOutput {
 	var addr net.Addr
 	var err error
@@ -31,6 +38,7 @@ func dialAndSend(t *testing.T, network, address string) *FrameStreamSockOutput {
 	out.SetTimeout(time.Second)
 	out.SetFlushTimeout(100 * time.Millisecond)
 	out.SetRetryInterval(time.Second)
+	out.SetLogger(&testLogger{t})
 
 	go out.RunOutputLoop()
 	<-time.After(500 * time.Millisecond)
@@ -53,6 +61,7 @@ func TestMultiConn(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	in.SetLogger(&testLogger{t})
 	out := make(chan []byte)
 	go in.ReadInto(out)
 
@@ -83,6 +92,7 @@ func TestReconnect(t *testing.T) {
 	}
 
 	in := NewFrameStreamSockInput(l)
+	in.SetLogger(&testLogger{t})
 	out := make(chan []byte)
 	go in.ReadInto(out)
 	readOne(t, out)
@@ -130,8 +140,10 @@ func BenchmarkConnectUnidirectional(b *testing.B) {
 		i := 1
 
 		b.StartTimer()
-		for _ = range outch { i++ }
-		if i != b.N {	
+		for _ = range outch {
+			i++
+		}
+		if i != b.N {
 			b.Error("invalid frame count")
 		}
 		close(readDone)
@@ -175,7 +187,9 @@ func BenchmarkConnectBidirectional(b *testing.B) {
 	go func() {
 		<-outch
 		b.StartTimer()
-		for i := 1; i < b.N; i++ { <-outch } // NB: read never fails
+		for i := 1; i < b.N; i++ {
+			<-outch
+		} // NB: read never fails
 		close(readDone)
 	}()
 

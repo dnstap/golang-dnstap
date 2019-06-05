@@ -43,6 +43,7 @@ func NewFrameStreamSockOutput(address net.Addr) (*FrameStreamSockOutput, error) 
 			Dialer: &net.Dialer{
 				Timeout: 30 * time.Second,
 			},
+			Logger: &nullLogger{},
 		},
 	}, nil
 }
@@ -78,6 +79,12 @@ func (o *FrameStreamSockOutput) SetRetryInterval(retry time.Duration) {
 // timeout.
 func (o *FrameStreamSockOutput) SetDialer(dialer *net.Dialer) {
 	o.wopt.Dialer = dialer
+}
+
+// SetLogger configures FrameStreamSockOutput to log through the given
+// Logger.
+func (o *FrameStreamSockOutput) SetLogger(logger Logger) {
+	o.wopt.Logger = logger
 }
 
 // GetOutputChannel returns the channel on which the

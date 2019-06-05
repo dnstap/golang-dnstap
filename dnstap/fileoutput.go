@@ -48,21 +48,33 @@ type fileOutput struct {
 }
 
 func openOutputFile(filename string, formatter dnstap.TextFormatFunc, doAppend bool) (o dnstap.Output, err error) {
+	var fso *dnstap.FrameStreamOutput
+	var to *dnstap.TextOutput
 	if formatter == nil {
 		if filename == "-" || filename == "" {
-			o = dnstap.NewTextOutput(os.Stdout, dnstap.TextFormat)
-			return
+			to = dnstap.NewTextOutput(os.Stdout, dnstap.TextFormat)
+			to.SetLogger(logger)
+			return to, nil
 		}
-		o, err = dnstap.NewFrameStreamOutputFromFilename(filename)
+		fso, err = dnstap.NewFrameStreamOutputFromFilename(filename)
+		if err == nil {
+			fso.SetLogger(logger)
+			return fso, nil
+		}
 	} else {
 		if filename == "-" || filename == "" {
 			if doAppend {
 				return nil, errors.New("cannot append to stdout (-)")
 			}
-			o = dnstap.NewTextOutput(os.Stdout, formatter)
-			return
+			to = dnstap.NewTextOutput(os.Stdout, formatter)
+			to.SetLogger(logger)
+			return to, nil
 		}
-		o, err = dnstap.NewTextOutputFromFilename(filename, formatter, doAppend)
+		to, err = dnstap.NewTextOutputFromFilename(filename, formatter, doAppend)
+		if err == nil {
+			to.SetLogger(logger)
+		}
+		return to, nil
 	}
 	return
 }

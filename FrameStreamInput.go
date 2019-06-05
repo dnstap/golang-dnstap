@@ -18,7 +18,6 @@ package dnstap
 
 import (
 	"io"
-	"log"
 	"os"
 	"time"
 )
@@ -40,6 +39,7 @@ var MaxPayloadSize uint32 = 96 * 1024
 type FrameStreamInput struct {
 	wait   chan bool
 	reader *Reader
+	log    Logger
 }
 
 // NewFrameStreamInput creates a FrameStreamInput reading data from the given
@@ -79,6 +79,11 @@ func NewFrameStreamInputFromFilename(fname string) (input *FrameStreamInput, err
 	return
 }
 
+// SetLogger configures a logger for FrameStreamInput read error reporting.
+func (input *FrameStreamInput) SetLogger(logger Logger) {
+	input.log = logger
+}
+
 // ReadInto reads data from the FrameStreamInput into the output channel.
 //
 // ReadInto satisfies the dnstap Input interface.
@@ -94,7 +99,7 @@ func (input *FrameStreamInput) ReadInto(output chan []byte) {
 		}
 
 		if err != io.EOF {
-			log.Printf("framestream Read error: %v", err)
+			input.log.Printf("FrameStreamInput: Read error: %v", err)
 		}
 
 		break

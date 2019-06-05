@@ -30,6 +30,9 @@ type SocketWriterOptions struct {
 	// Dialer is the dialer used to establish the connection. If nil,
 	// SocketWriter will use a default dialer with a 30 second timeout.
 	Dialer *net.Dialer
+	// Logger provides the logger for connection establishment, reconnection,
+	// and error events of the SocketWriter.
+	Logger Logger
 }
 
 type flushWriter struct {
@@ -124,6 +127,9 @@ func NewSocketWriter(addr net.Addr, opt *SocketWriterOptions) *SocketWriter {
 		opt = &SocketWriterOptions{}
 	}
 
+	if opt.Logger == nil {
+		opt.Logger = &nullLogger{}
+	}
 	return &SocketWriter{addr: addr, opt: *opt}
 }
 
@@ -175,12 +181,14 @@ func (sw *SocketWriter) Write(p []byte) (int, error) {
 	for ; ; time.Sleep(sw.opt.RetryInterval) {
 		if sw.w == nil {
 			if err := sw.openWriter(); err != nil {
+				sw.opt.Logger.Printf("%s: open failed: %v", sw.addr, err)
 				continue
 			}
 		}
 
 		n, err := sw.w.Write(p)
 		if err != nil {
+			sw.opt.Logger.Printf("%s: write failed: %v", sw.addr, err)
 			sw.Close()
 			continue
 		}
