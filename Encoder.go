@@ -18,7 +18,7 @@ package dnstap
 
 import (
 	"io"
-	"time"
+	"net"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -29,23 +29,9 @@ type Encoder struct {
 	w *Writer
 }
 
-// EncoderOptions specifies configuration for the Encoder
-type EncoderOptions struct {
-	// If Bidirectional is true, the underlying io.Writer must also
-	// satisfy io.Reader, and the dnstap Encoder will use the bidirectional
-	// Frame Streams protocol.
-	Bidirectional bool
-	// Timeout sets the Read and Write timeout for the Encoder. This is
-	// only in effect if the underlying io.Writer is a net.Conn.
-	Timeout time.Duration
-}
-
 // NewEncoder creates an Encoder using the given io.Writer and options.
-func NewEncoder(w io.Writer, opt *EncoderOptions) (*Encoder, error) {
-	ew, err := NewWriter(w, &WriterOptions{
-		Bidirectional: opt.Bidirectional,
-		Timeout:       opt.Timeout,
-	})
+func NewEncoder(w io.Writer, opt *WriterOptions) (*Encoder, error) {
+	ew, err := NewWriter(w, opt)
 	if err != nil {
 		return nil, err
 	}
