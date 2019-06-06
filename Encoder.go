@@ -49,3 +49,23 @@ func (e *Encoder) Encode(m *Dnstap) error {
 	_, err = e.w.Write(b)
 	return err
 }
+
+type SocketEncoder struct {
+	w *SocketWriter
+}
+
+func NewSocketEncoder(addr net.Addr, opt *SocketWriterOptions) *SocketEncoder {
+	return &SocketEncoder{
+		w: NewSocketWriter(addr, opt),
+	}
+}
+
+func (se *SocketEncoder) Encode(m *Dnstap) error {
+	b, err := proto.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	_, err = se.w.Write(b)
+	return err
+}
