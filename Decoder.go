@@ -27,8 +27,8 @@ type DecoderOptions struct {
 	// for the Decoder. Messages larger than this size will be discarded,
 	// and Decode() will return framestream.ErrDataFrameTooLarge.
 	//
-	// Subsequent calls to Decode() may succeed after this error is
-	// returned.
+	// Subsequent calls to Decode() may succeed after a Decode() call
+	// returns framestream.ErrDataFrameTooLarge.
 	MaxPayloadSize uint32
 }
 

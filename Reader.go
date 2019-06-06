@@ -18,8 +18,9 @@ type ReaderOptions struct {
 	// satisfy io.Writer, and the dnstap Reader will use the bidirectional
 	// Frame Streams protocol.
 	Bidirectional bool
-	// Timeout sets the Read and Write timeout for the Reader. This is
-	// only in effect if the underlying io.Reader is a net.Conn.
+	// Timeout sets the timeout for reading the initial handshake and
+	// writing response control messages to the underlying Reader. Timeout
+	// is only effective if the underlying Reader is a net.Conn.
 	Timeout time.Duration
 }
 

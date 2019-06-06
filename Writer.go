@@ -18,8 +18,9 @@ type WriterOptions struct {
 	// satisfy io.Reader, and the dnstap Writer will use the bidirectional
 	// Frame Streams protocol.
 	Bidirectional bool
-	// Timeout sets the Read and Write timeout for the Writer. This is
-	// only in effect if the underlying io.Writer is a net.Conn.
+	// Timeout sets the write timeout for data and control messages and the
+	// read timeout for handshake responses on the underlying Writer. Timeout
+	// is only effective if the underlying Writer is a net.Conn.
 	Timeout time.Duration
 }
 

@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// A SocktWriter writes data to a connected socket, connecting it if
-// necessary.
+// A SocketWriter writes data to a Frame Streams TCP or Unix domain socket,
+// establishing or restarting the connection if needed.
 type SocketWriter struct {
 	w    io.WriteCloser
 	c    net.Conn

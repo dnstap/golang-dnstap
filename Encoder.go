@@ -7,7 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// A dnstap Encoder serializes and writes Dnstap messages to an underlying
+// An Encoder serializes and writes Dnstap messages to an underlying
 // io.Writer.
 type Encoder struct {
 	w *Writer
@@ -36,7 +36,7 @@ func NewEncoder(w io.Writer, opt *EncoderOptions) (*Encoder, error) {
 	return &Encoder{w: ew}, nil
 }
 
-// Encode serializes and writes the Dnstap message me to the encoder's
+// Encode serializes and writes the Dnstap message m to the encoder's
 // Writer.
 func (e *Encoder) Encode(m *Dnstap) error {
 	b, err := proto.Marshal(m)

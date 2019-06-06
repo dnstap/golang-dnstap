@@ -43,7 +43,7 @@ func NewFrameStreamOutput(w io.Writer) (o *FrameStreamOutput, err error) {
 	}, nil
 }
 
-// NewFrameStreamOutputFromFilename creates a file with the namee fname,
+// NewFrameStreamOutputFromFilename creates a file with the name fname,
 // truncates it if it exists, and returns a FrameStreamOutput writing to
 // the newly created or truncated file.
 func NewFrameStreamOutputFromFilename(fname string) (o *FrameStreamOutput, err error) {

@@ -45,7 +45,7 @@ func NewFrameStreamSockInput(listener net.Listener) (input *FrameStreamSockInput
 // response control messages to clients of the FrameStreamSockInput's listener.
 //
 // The timeout is effective only for connections accepted after the call to
-// FrameStreamSockInput.
+// SetTimeout.
 func (input *FrameStreamSockInput) SetTimeout(timeout time.Duration) {
 	input.timeout = timeout
 }
