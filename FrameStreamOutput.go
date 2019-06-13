@@ -25,7 +25,7 @@ import (
 type FrameStreamOutput struct {
 	outputChannel chan []byte
 	wait          chan bool
-	w             *Writer
+	w             Writer
 	log           Logger
 }
 
@@ -79,7 +79,7 @@ func (o *FrameStreamOutput) GetOutputChannel() chan []byte {
 // RunOutputLoop satisfies the dnstap Output interface.
 func (o *FrameStreamOutput) RunOutputLoop() {
 	for frame := range o.outputChannel {
-		if _, err := o.w.Write(frame); err != nil {
+		if _, err := o.w.WriteFrame(frame); err != nil {
 			o.log.Printf("FrameStreamOutput: Write error: %v, returning", err)
 			close(o.wait)
 			return
@@ -95,6 +95,5 @@ func (o *FrameStreamOutput) RunOutputLoop() {
 func (o *FrameStreamOutput) Close() {
 	close(o.outputChannel)
 	<-o.wait
-	o.w.Flush()
 	o.w.Close()
 }

@@ -106,7 +106,7 @@ func (o *FrameStreamSockOutput) RunOutputLoop() {
 	for b := range o.outputChannel {
 		// w is of type *SocketWriter, whose Write implementation
 		// handles all errors by retrying the connection.
-		w.Write(b)
+		w.WriteFrame(b)
 	}
 
 	w.Close()

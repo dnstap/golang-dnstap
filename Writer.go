@@ -23,9 +23,10 @@ import (
 	framestream "github.com/farsightsec/golang-framestream"
 )
 
-// A Writer writes Dnstap frames to an underlying io.Writer
-type Writer struct {
-	*framestream.Writer
+// A Writer writes dnstap frames to its destination.
+type Writer interface {
+	WriteFrame([]byte) (int, error)
+	Close() error
 }
 
 // WriterOptions specifies configuration for the Writer
@@ -41,18 +42,14 @@ type WriterOptions struct {
 }
 
 // NewWriter creates a Writer using the given io.Writer and options.
-func NewWriter(w io.Writer, opt *WriterOptions) (*Writer, error) {
+func NewWriter(w io.Writer, opt *WriterOptions) (Writer, error) {
 	if opt == nil {
 		opt = &WriterOptions{}
 	}
-	fw, err := framestream.NewWriter(w,
+	return framestream.NewWriter(w,
 		&framestream.WriterOptions{
 			ContentTypes:  [][]byte{FSContentType},
 			Timeout:       opt.Timeout,
 			Bidirectional: opt.Bidirectional,
 		})
-	if err != nil {
-		return nil, err
-	}
-	return &Writer{fw}, nil
 }

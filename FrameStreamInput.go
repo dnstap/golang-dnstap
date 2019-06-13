@@ -38,7 +38,7 @@ var MaxPayloadSize uint32 = 96 * 1024
 // A FrameStreamInput reads dnstap data from an io.ReadWriter.
 type FrameStreamInput struct {
 	wait   chan bool
-	reader *Reader
+	reader Reader
 	log    Logger
 }
 
@@ -90,7 +90,7 @@ func (input *FrameStreamInput) SetLogger(logger Logger) {
 func (input *FrameStreamInput) ReadInto(output chan []byte) {
 	buf := make([]byte, MaxPayloadSize)
 	for {
-		n, err := input.reader.Read(buf)
+		n, err := input.reader.ReadFrame(buf)
 		if err == nil {
 			newbuf := make([]byte, n)
 			copy(newbuf, buf)

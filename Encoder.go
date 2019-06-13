@@ -17,25 +17,18 @@
 package dnstap
 
 import (
-	"io"
-	"net"
-
 	"github.com/golang/protobuf/proto"
 )
 
 // An Encoder serializes and writes Dnstap messages to an underlying
-// io.Writer.
+// dnstap Writer
 type Encoder struct {
-	w *Writer
+	w Writer
 }
 
-// NewEncoder creates an Encoder using the given io.Writer and options.
-func NewEncoder(w io.Writer, opt *WriterOptions) (*Encoder, error) {
-	ew, err := NewWriter(w, opt)
-	if err != nil {
-		return nil, err
-	}
-	return &Encoder{w: ew}, nil
+// NewEncoder creates an Encoder using the given dnstap Writer
+func NewEncoder(w Writer) *Encoder {
+	return &Encoder{w}
 }
 
 // Encode serializes and writes the Dnstap message m to the encoder's
@@ -46,26 +39,6 @@ func (e *Encoder) Encode(m *Dnstap) error {
 		return err
 	}
 
-	_, err = e.w.Write(b)
-	return err
-}
-
-type SocketEncoder struct {
-	w *SocketWriter
-}
-
-func NewSocketEncoder(addr net.Addr, opt *SocketWriterOptions) *SocketEncoder {
-	return &SocketEncoder{
-		w: NewSocketWriter(addr, opt),
-	}
-}
-
-func (se *SocketEncoder) Encode(m *Dnstap) error {
-	b, err := proto.Marshal(m)
-	if err != nil {
-		return err
-	}
-
-	_, err = se.w.Write(b)
+	_, err = e.w.WriteFrame(b)
 	return err
 }

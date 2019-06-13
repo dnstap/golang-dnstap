@@ -17,16 +17,17 @@
 package dnstap
 
 import (
-	"io"
 	"net"
 	"sync"
 	"time"
+
+	framestream "github.com/farsightsec/golang-framestream"
 )
 
 // A SocketWriter writes data to a Frame Streams TCP or Unix domain socket,
 // establishing or restarting the connection if needed.
-type SocketWriter struct {
-	w    io.WriteCloser
+type socketWriter struct {
+	w    Writer
 	c    net.Conn
 	addr net.Addr
 	opt  SocketWriterOptions
@@ -53,7 +54,7 @@ type SocketWriterOptions struct {
 
 type flushWriter struct {
 	m           sync.Mutex
-	w           *Writer
+	w           *framestream.Writer
 	d           time.Duration
 	timer       *time.Timer
 	timerActive bool
@@ -84,10 +85,12 @@ func newFlushWriter(c net.Conn, d time.Duration) (*flushWriter, error) {
 		lastWritten: &fw.lastFlushed,
 	}
 
-	fw.w, err = NewWriter(fc, &WriterOptions{
-		Bidirectional: true,
-		Timeout:       d,
-	})
+	fw.w, err = framestream.NewWriter(fc,
+		&framestream.WriterOptions{
+			ContentTypes:  [][]byte{FSContentType},
+			Bidirectional: true,
+			Timeout:       d,
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +118,9 @@ func (fw *flushWriter) runFlusher() {
 	}
 }
 
-func (fw *flushWriter) Write(p []byte) (int, error) {
+func (fw *flushWriter) WriteFrame(p []byte) (int, error) {
 	fw.m.Lock()
-	n, err := fw.w.Write(p)
+	n, err := fw.w.WriteFrame(p)
 	if !fw.timerActive {
 		fw.timer.Reset(fw.d)
 		fw.timerActive = true
@@ -138,7 +141,7 @@ func (fw *flushWriter) Close() error {
 // NewSocketWriter creates a SocketWriter which writes data to a connection
 // to the given addr. The SocketWriter maintains and re-establishes the
 // connection to this address as needed.
-func NewSocketWriter(addr net.Addr, opt *SocketWriterOptions) *SocketWriter {
+func NewSocketWriter(addr net.Addr, opt *SocketWriterOptions) Writer {
 	if opt == nil {
 		opt = &SocketWriterOptions{}
 	}
@@ -146,10 +149,10 @@ func NewSocketWriter(addr net.Addr, opt *SocketWriterOptions) *SocketWriter {
 	if opt.Logger == nil {
 		opt.Logger = &nullLogger{}
 	}
-	return &SocketWriter{addr: addr, opt: *opt}
+	return &socketWriter{addr: addr, opt: *opt}
 }
 
-func (sw *SocketWriter) openWriter() error {
+func (sw *socketWriter) openWriter() error {
 	var err error
 	sw.c, err = sw.opt.Dialer.Dial(sw.addr.Network(), sw.addr.String())
 	if err != nil {
@@ -174,7 +177,7 @@ func (sw *SocketWriter) openWriter() error {
 }
 
 // Close shuts down the SocketWriter, closing any open connection.
-func (sw *SocketWriter) Close() error {
+func (sw *socketWriter) Close() error {
 	var err error
 	if sw.w != nil {
 		err = sw.w.Close()
@@ -193,7 +196,7 @@ func (sw *SocketWriter) Close() error {
 // Write writes the data in p as a Dnstap frame to a connection to the
 // SocketWriter's address. Write may block indefinitely while the SocketWriter
 // attempts to establish or re-establish the connection and FrameStream session.
-func (sw *SocketWriter) Write(p []byte) (int, error) {
+func (sw *socketWriter) WriteFrame(p []byte) (int, error) {
 	for ; ; time.Sleep(sw.opt.RetryInterval) {
 		if sw.w == nil {
 			if err := sw.openWriter(); err != nil {
@@ -202,7 +205,7 @@ func (sw *SocketWriter) Write(p []byte) (int, error) {
 			}
 		}
 
-		n, err := sw.w.Write(p)
+		n, err := sw.w.WriteFrame(p)
 		if err != nil {
 			sw.opt.Logger.Printf("%s: write failed: %v", sw.addr, err)
 			sw.Close()

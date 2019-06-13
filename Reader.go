@@ -23,9 +23,9 @@ import (
 	framestream "github.com/farsightsec/golang-framestream"
 )
 
-// A Reader reads Dnstap frames from an underlying io.Reader
-type Reader struct {
-	*framestream.Reader
+// A Reader is a source of dnstap frames.
+type Reader interface {
+	ReadFrame([]byte) (int, error)
 }
 
 // ReaderOptions specifies configuration for the Reader.
@@ -41,7 +41,7 @@ type ReaderOptions struct {
 }
 
 // NewReader creates a Reader using the given io.Reader and options.
-func NewReader(r io.Reader, opt *ReaderOptions) (*Reader, error) {
+func NewReader(r io.Reader, opt *ReaderOptions) (Reader, error) {
 	if opt == nil {
 		opt = &ReaderOptions{}
 	}
@@ -54,5 +54,5 @@ func NewReader(r io.Reader, opt *ReaderOptions) (*Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Reader{fr}, nil
+	return fr, nil
 }
