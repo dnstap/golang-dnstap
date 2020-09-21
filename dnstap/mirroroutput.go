@@ -41,10 +41,7 @@ func (mo *mirrorOutput) Add(o dnstap.Output) {
 func (mo *mirrorOutput) RunOutputLoop() {
 	for b := range mo.data {
 		for _, o := range mo.outputs {
-			select {
-			case o.GetOutputChannel() <- b:
-			default:
-			}
+			o.GetOutputChannel() <- b
 		}
 	}
 	for _, o := range mo.outputs {
