@@ -65,6 +65,7 @@ func NewFrameStreamInputTimeout(r io.ReadWriter, bi bool, timeout time.Duration)
 	return &FrameStreamInput{
 		wait:   make(chan bool),
 		reader: reader,
+		log:    nullLogger{},
 	}, nil
 }
 

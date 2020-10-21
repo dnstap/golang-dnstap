@@ -40,6 +40,7 @@ func NewFrameStreamOutput(w io.Writer) (o *FrameStreamOutput, err error) {
 		outputChannel: make(chan []byte, outputChannelSize),
 		wait:          make(chan bool),
 		w:             ow,
+		log:           nullLogger{},
 	}, nil
 }
 
