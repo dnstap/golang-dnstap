@@ -45,14 +45,10 @@ func NewReader(r io.Reader, opt *ReaderOptions) (Reader, error) {
 	if opt == nil {
 		opt = &ReaderOptions{}
 	}
-	fr, err := framestream.NewReader(r,
+	return framestream.NewReader(r,
 		&framestream.ReaderOptions{
 			ContentTypes:  [][]byte{FSContentType},
 			Timeout:       opt.Timeout,
 			Bidirectional: opt.Bidirectional,
 		})
-	if err != nil {
-		return nil, err
-	}
-	return fr, nil
 }

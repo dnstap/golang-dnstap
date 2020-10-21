@@ -76,8 +76,7 @@ func NewFrameStreamInputFromFilename(fname string) (input *FrameStreamInput, err
 	if err != nil {
 		return nil, err
 	}
-	input, err = NewFrameStreamInput(file, false)
-	return
+	return NewFrameStreamInput(file, false)
 }
 
 // SetLogger configures a logger for FrameStreamInput read error reporting.
