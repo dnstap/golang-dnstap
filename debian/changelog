@@ -1,4 +1,16 @@
-golang-dnstap (0.1.0-1) UNRELEASED; urgency=medium
+golang-dnstap (0.3.0-1) UNRELEASED; urgency=medium
+
+  * Add Reader and Writer APIs to provide lower-level control over I/O
+    than the Input and Output interfaces.
+
+  * Add Encoder, Decoder to handle parsed dnstap messages.
+
+  * Add configurable logging to Input and Output implementations,
+    removing log.Fatal calls.
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Thu, 12 Nov 2020 14:48:58 -0500
+
+golang-dnstap (0.1.0-1) debian-fsi; urgency=medium
 
   * Miscellaneous debian packaging metadata cleanups. This is release 0.1.0.
 
