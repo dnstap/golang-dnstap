@@ -1,7 +1,10 @@
 #!/usr/bin/make -f
 # See debhelper(7) (uncomment to enable)
 # output every command that modifies files on the build system.
-#export DH_VERBOSE = 1
+export DH_VERBOSE = 1
+
+# set executable path to see the golang-1.11-go install
+export PATH := /usr/lib/go-1.11/bin:/usr/bin:/bin
 
 %:
 	dh $@ --buildsystem=golang --with=golang
