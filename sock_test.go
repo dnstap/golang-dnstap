@@ -3,6 +3,7 @@ package dnstap
 import (
 	"fmt"
 	"net"
+	"os"
 	"testing"
 	"time"
 )
@@ -60,6 +61,8 @@ func TestMultiConn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	defer os.Remove("dnstap.sock")
 
 	in.SetLogger(&testLogger{t})
 	out := make(chan []byte)
