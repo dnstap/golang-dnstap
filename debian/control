@@ -2,7 +2,7 @@ Source: golang-dnstap
 Section: net
 Priority: optional
 Maintainer: Farsight Security, Inc. <software@farsightsecurity.com>
-Build-Depends: debhelper (>= 9), dh-golang, golang-1.11-go,
+Build-Depends: debhelper (>= 9), dh-golang (>=1.39~), golang-1.11-go,
  golang-github-miekg-dns-dev,
  golang-goprotobuf-dev,
  golang-github-farsightsec-go-framestream-dev (>= 0.3.0)
