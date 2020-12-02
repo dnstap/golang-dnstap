@@ -16,7 +16,6 @@
 
 package main
 
-
 import (
 	dnstap "github.com/dnstap/golang-dnstap"
 )

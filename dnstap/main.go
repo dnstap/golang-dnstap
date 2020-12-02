@@ -68,6 +68,8 @@ Quiet text output format mnemonics:
 `)
 }
 
+var logger = log.New(os.Stderr, "", log.LstdFlags)
+
 func main() {
 	var tcpOutputs, unixOutputs stringList
 	var fileInputs, tcpInputs, unixInputs stringList
@@ -140,6 +142,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input file %s: %v\n", fname, err)
 			os.Exit(1)
 		}
+		i.SetLogger(logger)
 		fmt.Fprintf(os.Stderr, "dnstap: opened input file %s\n", fname)
 		iwg.Add(1)
 		go runInput(i, output, &iwg)
@@ -151,6 +154,7 @@ func main() {
 			os.Exit(1)
 		}
 		i.SetTimeout(*flagTimeout)
+		i.SetLogger(logger)
 		fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", path)
 		iwg.Add(1)
 		go runInput(i, output, &iwg)
@@ -163,6 +167,7 @@ func main() {
 		}
 		i := dnstap.NewFrameStreamSockInput(l)
 		i.SetTimeout(*flagTimeout)
+		i.SetLogger(logger)
 		iwg.Add(1)
 		go runInput(i, output, &iwg)
 	}
@@ -198,6 +203,7 @@ func addSockOutputs(mo *mirrorOutput, network string, addrs stringList) error {
 			return err
 		}
 		o.SetTimeout(*flagTimeout)
+		o.SetLogger(logger)
 		go o.RunOutputLoop()
 		mo.Add(o)
 	}
