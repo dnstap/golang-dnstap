@@ -17,7 +17,7 @@
 package dnstap
 
 import (
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // An Encoder serializes and writes Dnstap messages to an underlying
