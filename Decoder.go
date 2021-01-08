@@ -18,7 +18,7 @@ package dnstap
 
 import (
 	framestream "github.com/farsightsec/golang-framestream"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // A Decoder reads and parses Dnstap messages from an io.Reader
