@@ -21,7 +21,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // A TextFormatFunc renders a dnstap message into a human readable format.
