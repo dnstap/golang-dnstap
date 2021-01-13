@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//go:generate ./genproto.sh
+
 package dnstap
 
 const outputChannelSize = 32
