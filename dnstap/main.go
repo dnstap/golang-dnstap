@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 by Farsight Security, Inc.
+ * Copyright (c) 2013-2019 by Farsight Security, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,20 +22,30 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
 	"runtime"
-	"syscall"
+	"strings"
+	"sync"
 
 	"github.com/dnstap/golang-dnstap"
 )
 
+type stringList []string
+
+func (sl *stringList) Set(s string) error {
+	*sl = append(*sl, s)
+	return nil
+}
+func (sl *stringList) String() string {
+	return strings.Join(*sl, ", ")
+}
+
 var (
-	flagReadTcp   = flag.String("l", "", "read dnstap payloads from tcp/ip")
-	flagReadFile  = flag.String("r", "", "read dnstap payloads from file")
-	flagReadSock  = flag.String("u", "", "read dnstap payloads from unix socket")
-	flagWriteFile = flag.String("w", "-", "write output to file")
-	flagQuietText = flag.Bool("q", false, "use quiet text output")
-	flagYamlText  = flag.Bool("y", false, "use verbose YAML output")
+	flagTimeout    = flag.Duration("t", 0, "I/O timeout for tcp/ip and unix domain sockets")
+	flagWriteFile  = flag.String("w", "", "write output to file")
+	flagAppendFile = flag.Bool("a", false, "append to the given file, do not overwrite. valid only when outputting a text or YAML file.")
+	flagQuietText  = flag.Bool("q", false, "use quiet text output")
+	flagYamlText   = flag.Bool("y", false, "use verbose YAML output")
+	flagJSONText   = flag.Bool("j", false, "use verbose JSON output")
 )
 
 func usage() {
@@ -58,58 +68,17 @@ Quiet text output format mnemonics:
 `)
 }
 
-func outputOpener(fname string, text, yaml bool) func() dnstap.Output {
-	return func() dnstap.Output {
-		var o dnstap.Output
-		var err error
-		if text {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.TextFormat)
-		} else if yaml {
-			o, err = dnstap.NewTextOutputFromFilename(fname, dnstap.YamlFormat)
-		} else {
-			o, err = dnstap.NewFrameStreamOutputFromFilename(fname)
-		}
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Failed to open output file: %s\n", err)
-			os.Exit(1)
-		}
-
-		go o.RunOutputLoop()
-		return o
-	}
-}
-
-func outputLoop(opener func() dnstap.Output, data <-chan []byte, done chan<- struct{}) {
-	sigch := make(chan os.Signal, 1)
-	signal.Notify(sigch, os.Interrupt, syscall.SIGHUP)
-	o := opener()
-	defer func() {
-		o.Close()
-		close(done)
-		os.Exit(0)
-	}()
-	for {
-		select {
-		case b, ok := <-data:
-			if !ok {
-				return
-			}
-			o.GetOutputChannel() <- b
-		case sig := <-sigch:
-			if sig == syscall.SIGHUP {
-				o.Close()
-				o = opener()
-				continue
-			}
-			return
-		}
-	}
-}
+var logger = log.New(os.Stderr, "", log.LstdFlags)
 
 func main() {
-	var err error
-	var i dnstap.Input
+	var tcpOutputs, unixOutputs stringList
+	var fileInputs, tcpInputs, unixInputs stringList
+
+	flag.Var(&tcpOutputs, "T", "write dnstap payloads to tcp/ip address")
+	flag.Var(&unixOutputs, "U", "write dnstap payloads to unix socket")
+	flag.Var(&fileInputs, "r", "read dnstap payloads from file")
+	flag.Var(&tcpInputs, "l", "read dnstap payloads from tcp/ip")
+	flag.Var(&unixInputs, "u", "read dnstap payloads from unix socket")
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	log.SetFlags(0)
@@ -118,56 +87,125 @@ func main() {
 	// Handle command-line arguments.
 	flag.Parse()
 
-	if *flagReadFile == "" && *flagReadSock == "" && *flagReadTcp == "" {
+	if len(fileInputs)+len(unixInputs)+len(tcpInputs) == 0 {
 		fmt.Fprintf(os.Stderr, "dnstap: Error: no inputs specified.\n")
 		os.Exit(1)
 	}
 
-	if *flagWriteFile == "-" {
-		if *flagQuietText == false && *flagYamlText == false {
-			*flagQuietText = true
+	haveFormat := false
+	for _, f := range []bool{*flagQuietText, *flagYamlText, *flagJSONText} {
+		if haveFormat && f {
+			fmt.Fprintf(os.Stderr, "dnstap: Error: specify at most one of -q, -y, or -j.\n")
+			os.Exit(1)
 		}
+		haveFormat = haveFormat || f
 	}
 
-	if *flagReadFile != "" && *flagReadSock != "" && *flagReadTcp != "" {
-		fmt.Fprintf(os.Stderr, "dnstap: Error: specify exactly one of -r, -u or -l.\n")
+	output := newMirrorOutput()
+	if err := addSockOutputs(output, "tcp", tcpOutputs); err != nil {
+		fmt.Fprintf(os.Stderr, "dnstap: TCP error: %v\n", err)
 		os.Exit(1)
 	}
-
-	// Start the output loop.
-	output := make(chan []byte, 1)
-	opener := outputOpener(*flagWriteFile, *flagQuietText, *flagYamlText)
-	outDone := make(chan struct{})
-	go outputLoop(opener, output, outDone)
-
-	// Open the input and start the input loop.
-	if *flagReadFile != "" {
-		i, err = dnstap.NewFrameStreamInputFromFilename(*flagReadFile)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input file: %s\n", err)
-			os.Exit(1)
-		}
-		fmt.Fprintf(os.Stderr, "dnstap: opened input file %s\n", *flagReadFile)
-	} else if *flagReadSock != "" {
-		i, err = dnstap.NewFrameStreamSockInputFromPath(*flagReadSock)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket: %s\n", err)
-			os.Exit(1)
-		}
-		fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", *flagReadSock)
-	} else if *flagReadTcp != "" {
-		l, err := net.Listen("tcp", *flagReadTcp)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dnstap: Failed to listen: %s\n", err)
-			os.Exit(1)
-		}
-		i = dnstap.NewFrameStreamSockInput(l)
+	if err := addSockOutputs(output, "unix", unixOutputs); err != nil {
+		fmt.Fprintf(os.Stderr, "dnstap: Unix socket error: %v\n", err)
+		os.Exit(1)
 	}
-	i.ReadInto(output)
+	if *flagWriteFile != "" || len(tcpOutputs)+len(unixOutputs) == 0 {
+		var format dnstap.TextFormatFunc
 
-	// Wait for input loop to finish.
+		switch {
+		case *flagYamlText:
+			format = dnstap.YamlFormat
+		case *flagQuietText:
+			format = dnstap.TextFormat
+		case *flagJSONText:
+			format = dnstap.JSONFormat
+		}
+
+		o, err := newFileOutput(*flagWriteFile, format, *flagAppendFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: File output error on '%s': %v\n",
+				*flagWriteFile, err)
+			os.Exit(1)
+		}
+		go o.RunOutputLoop()
+		output.Add(o)
+	}
+
+	go output.RunOutputLoop()
+
+	var iwg sync.WaitGroup
+	// Open the input and start the input loop.
+	for _, fname := range fileInputs {
+		i, err := dnstap.NewFrameStreamInputFromFilename(fname)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input file %s: %v\n", fname, err)
+			os.Exit(1)
+		}
+		i.SetLogger(logger)
+		fmt.Fprintf(os.Stderr, "dnstap: opened input file %s\n", fname)
+		iwg.Add(1)
+		go runInput(i, output, &iwg)
+	}
+	for _, path := range unixInputs {
+		i, err := dnstap.NewFrameStreamSockInputFromPath(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to open input socket %s: %v\n", path, err)
+			os.Exit(1)
+		}
+		i.SetTimeout(*flagTimeout)
+		i.SetLogger(logger)
+		fmt.Fprintf(os.Stderr, "dnstap: opened input socket %s\n", path)
+		iwg.Add(1)
+		go runInput(i, output, &iwg)
+	}
+	for _, addr := range tcpInputs {
+		l, err := net.Listen("tcp", addr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dnstap: Failed to listen on %s: %v\n", addr, err)
+			os.Exit(1)
+		}
+		i := dnstap.NewFrameStreamSockInput(l)
+		i.SetTimeout(*flagTimeout)
+		i.SetLogger(logger)
+		iwg.Add(1)
+		go runInput(i, output, &iwg)
+	}
+	iwg.Wait()
+
+	output.Close()
+}
+
+func runInput(i dnstap.Input, o dnstap.Output, wg *sync.WaitGroup) {
+	go i.ReadInto(o.GetOutputChannel())
 	i.Wait()
-	close(output)
+	wg.Done()
+}
 
-	<-outDone
+func addSockOutputs(mo *mirrorOutput, network string, addrs stringList) error {
+	var naddr net.Addr
+	var err error
+	for _, addr := range addrs {
+		switch network {
+		case "tcp":
+			naddr, err = net.ResolveTCPAddr(network, addr)
+		case "unix":
+			naddr, err = net.ResolveUnixAddr(network, addr)
+		default:
+			return fmt.Errorf("invalid network '%s'", network)
+		}
+		if err != nil {
+			return err
+		}
+
+		o, err := dnstap.NewFrameStreamSockOutput(naddr)
+		if err != nil {
+			return err
+		}
+		o.SetTimeout(*flagTimeout)
+		o.SetLogger(logger)
+		go o.RunOutputLoop()
+		mo.Add(o)
+	}
+	return nil
 }
