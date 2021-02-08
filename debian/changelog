@@ -1,3 +1,13 @@
+golang-dnstap (0.4.0-1) debian-fsi; urgency=medium
+
+  * Upgrade to newer google.golang.org/protobuf/proto.
+
+  * Recognize DOT and DOH.
+
+  * Add support for DNS update query and response messages.
+
+ -- Farsight Security, Inc. <software@farsightsecurity.com>  Mon, 08 Feb 2021 10:56:48 -0500
+
 golang-dnstap (0.3.0-1) debian-fsi; urgency=medium
 
   * Add Reader and Writer APIs to provide lower-level control over I/O

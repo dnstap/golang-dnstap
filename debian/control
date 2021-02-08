@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Farsight Security, Inc. <software@farsightsecurity.com>
 Build-Depends: debhelper (>= 9), dh-golang (>=1.39~), golang-1.11-go,
  golang-github-miekg-dns-dev,
- golang-goprotobuf-dev,
+ golang-google-protobuf-dev,
  golang-github-farsightsec-go-framestream-dev (>= 0.3.0)
 Standards-Version: 3.9.8
 Vcs-Git: https://github.com/dnstap/golang-dnstap.git
@@ -23,7 +23,7 @@ Package: golang-github-dnstap-go-dnstap-dev
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  golang-github-miekg-dns-dev,
- golang-goprotobuf-dev,
+ golang-google-protobuf-dev,
  golang-github-farsightsec-go-framestream-dev (>= 0.3.0)
 Description: Golang development code for DNSTAP
  dnstap implements an encoding format for DNS server events. It uses
