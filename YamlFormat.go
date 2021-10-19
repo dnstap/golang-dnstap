@@ -51,11 +51,11 @@ func yamlConvertMessage(m *Message, s *bytes.Buffer) {
 	}
 
 	if m.QueryAddress != nil {
-		s.WriteString(fmt.Sprint("  query_address: ", net.IP(m.QueryAddress), "\n"))
+		s.WriteString(fmt.Sprint("  query_address: ", strconv.Quote(net.IP(m.QueryAddress).String()), "\n"))
 	}
 
 	if m.ResponseAddress != nil {
-		s.WriteString(fmt.Sprint("  response_address: ", net.IP(m.ResponseAddress), "\n"))
+		s.WriteString(fmt.Sprint("  response_address: ", strconv.Quote(net.IP(m.ResponseAddress).String()), "\n"))
 	}
 
 	if m.QueryPort != nil {
