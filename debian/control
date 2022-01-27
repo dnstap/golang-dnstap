@@ -7,7 +7,7 @@ Build-Depends:
  dh-golang (>=1.39~),
  golang-1.18-go,
  golang-github-miekg-dns-dev,
- golang-github-farsightsec-go-framestream-dev (>= 0.3.0),
+ golang-github-farsightsec-golang-framestream-dev (>= 0.3.0),
  golang-google-protobuf-dev,
  golang-goprotobuf-dev,
 Standards-Version: 3.9.8
