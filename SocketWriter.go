@@ -181,14 +181,18 @@ func (sw *socketWriter) Close() error {
 	var err error
 	if sw.w != nil {
 		err = sw.w.Close()
+		sw.w = nil
 		if err == nil {
 			return sw.c.Close()
 		}
 		sw.c.Close()
+		sw.c = nil
 		return err
 	}
 	if sw.c != nil {
-		return sw.c.Close()
+		var err = sw.c.Close()
+		sw.c = nil
+		return err
 	}
 	return nil
 }

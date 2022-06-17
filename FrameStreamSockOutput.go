@@ -99,14 +99,19 @@ func (o *FrameStreamSockOutput) GetOutputChannel() chan []byte {
 // a connections to the FrameStreamSockOutput's address, establishing
 // the connection as needed.
 //
-// RunOutputLoop satisifes the dnstap Output interface.
+// RunOutputLoop satisifies the dnstap Output interface.
 func (o *FrameStreamSockOutput) RunOutputLoop() {
 	w := NewSocketWriter(o.address, &o.wopt)
 
 	for b := range o.outputChannel {
 		// w is of type *SocketWriter, whose Write implementation
 		// handles all errors by retrying the connection.
-		w.WriteFrame(b)
+		_, err := w.WriteFrame(b)
+		if err != nil {
+			w.Close()
+			w = NewSocketWriter(o.address, &o.wopt)
+			_, err = w.WriteFrame(b)
+		}
 	}
 
 	w.Close()
