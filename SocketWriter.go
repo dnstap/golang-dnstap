@@ -17,6 +17,7 @@
 package dnstap
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -79,12 +80,14 @@ func newFlushWriter(c net.Conn, d time.Duration) (*flushWriter, error) {
 	if !fw.timer.Stop() {
 		<-fw.timer.C
 	}
-
+	go fw.runFlusher()
+	if c == nil {
+		return fw, fmt.Errorf("Connection is closed")
+	}
 	fc := &flusherConn{
 		Conn:        c,
 		lastWritten: &fw.lastFlushed,
 	}
-
 	fw.w, err = framestream.NewWriter(fc,
 		&framestream.WriterOptions{
 			ContentTypes:  [][]byte{FSContentType},
@@ -94,7 +97,7 @@ func newFlushWriter(c net.Conn, d time.Duration) (*flushWriter, error) {
 	if err != nil {
 		return nil, err
 	}
-	go fw.runFlusher()
+
 	return fw, nil
 }
 
@@ -120,6 +123,10 @@ func (fw *flushWriter) runFlusher() {
 
 func (fw *flushWriter) WriteFrame(p []byte) (int, error) {
 	fw.m.Lock()
+	if fw.w == nil {
+		fw.m.Unlock()
+		return 0, fmt.Errorf("Writer is closed")
+	}
 	n, err := fw.w.WriteFrame(p)
 	if !fw.timerActive {
 		fw.timer.Reset(fw.d)
@@ -130,10 +137,13 @@ func (fw *flushWriter) WriteFrame(p []byte) (int, error) {
 }
 
 func (fw *flushWriter) Close() error {
+	var err error
 	fw.m.Lock()
 	fw.stopped = true
 	fw.timer.Reset(0)
-	err := fw.w.Close()
+	if fw.w != nil {
+		err = fw.w.Close()
+	}
 	fw.m.Unlock()
 	return err
 }
@@ -155,9 +165,6 @@ func NewSocketWriter(addr net.Addr, opt *SocketWriterOptions) Writer {
 func (sw *socketWriter) openWriter() error {
 	var err error
 	sw.c, err = sw.opt.Dialer.Dial(sw.addr.Network(), sw.addr.String())
-	if err != nil {
-		return err
-	}
 
 	wopt := WriterOptions{
 		Bidirectional: true,
@@ -169,7 +176,7 @@ func (sw *socketWriter) openWriter() error {
 	} else {
 		sw.w, err = newFlushWriter(sw.c, sw.opt.FlushTimeout)
 	}
-	if err != nil {
+	if err != nil && sw.c != nil {
 		sw.c.Close()
 		return err
 	}
@@ -181,16 +188,13 @@ func (sw *socketWriter) Close() error {
 	var err error
 	if sw.w != nil {
 		err = sw.w.Close()
-		if err == nil {
-			return sw.c.Close()
-		}
-		sw.c.Close()
-		return err
+		sw.w = nil
 	}
 	if sw.c != nil {
-		return sw.c.Close()
+		err = sw.c.Close()
+		sw.c = nil
 	}
-	return nil
+	return err
 }
 
 // Write writes the data in p as a Dnstap frame to a connection to the
