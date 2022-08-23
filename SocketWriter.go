@@ -30,6 +30,7 @@ type socketWriter struct {
 	w    Writer
 	c    net.Conn
 	addr net.Addr
+	open bool
 	opt  SocketWriterOptions
 }
 
@@ -173,12 +174,14 @@ func (sw *socketWriter) openWriter() error {
 		sw.c.Close()
 		return err
 	}
+	sw.open = true
 	return nil
 }
 
 // Close shuts down the SocketWriter, closing any open connection.
 func (sw *socketWriter) Close() error {
 	var err error
+	sw.open = false
 	if sw.w != nil {
 		err = sw.w.Close()
 		if err == nil {
@@ -198,7 +201,7 @@ func (sw *socketWriter) Close() error {
 // attempts to establish or re-establish the connection and FrameStream session.
 func (sw *socketWriter) WriteFrame(p []byte) (int, error) {
 	for ; ; time.Sleep(sw.opt.RetryInterval) {
-		if sw.w == nil {
+		if !sw.open {
 			if err := sw.openWriter(); err != nil {
 				sw.opt.Logger.Printf("%s: open failed: %v", sw.addr, err)
 				continue
