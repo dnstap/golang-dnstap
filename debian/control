@@ -4,13 +4,14 @@ Priority: optional
 Maintainer: Farsight Security, Inc. <software@farsightsecurity.com>
 Build-Depends:
  debhelper (>= 11),
+ debhelper-compat (= 13),
  dh-golang (>=1.39~),
- golang-1.18-go,
+ golang-any,
  golang-github-miekg-dns-dev,
  golang-github-farsightsec-golang-framestream-dev (>= 0.3.0),
  golang-google-protobuf-dev,
  golang-goprotobuf-dev,
-Standards-Version: 3.9.8
+Standards-Version: 4.5.1
 Vcs-Git: https://github.com/dnstap/golang-dnstap.git
 Vcs-Browser: https://github.com/dnstap/golang-dnstap
 XS-Go-Import-Path: github.com/dnstap/golang-dnstap

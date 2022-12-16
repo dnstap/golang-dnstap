@@ -2,7 +2,5 @@
 
 # export DH_VERBOSE = 1
 
-export PATH := /usr/lib/go-1.18/bin:/usr/bin:/bin
-
 %:
 	dh $@ --buildsystem=golang --with=golang
