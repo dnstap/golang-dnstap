@@ -1,1 +1,5 @@
-usr/share/gocode/src/github.com/dnstap/golang-dnstap/*.go                 
+usr/share/gocode/src/github.com/dnstap/golang-dnstap/*.go
+usr/share/gocode/src/github.com/dnstap/golang-dnstap/*.mod
+usr/share/gocode/src/github.com/dnstap/golang-dnstap/*.sum
+usr/share/gocode/src/github.com/dnstap/golang-dnstap/dnstap/*.go
+usr/share/gocode/src/github.com/dnstap/golang-dnstap/dnstap.pb/dnstap.proto
