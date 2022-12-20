@@ -29,7 +29,7 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  golang-github-miekg-dns-dev,
  golang-google-protobuf-dev,
- golang-github-farsightsec-go-framestream-dev (>= 0.3.0)
+ golang-github-farsightsec-golang-framestream-dev (>= 0.3.0)
 Description: Golang development code for DNSTAP
  dnstap implements an encoding format for DNS server events. It uses
  a lightweight framing on top of event payloads encoded using Protocol
