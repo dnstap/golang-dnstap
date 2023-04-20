@@ -153,3 +153,7 @@ func (input *FrameStreamSockInput) ReadInto(output chan []byte) {
 func (input *FrameStreamSockInput) Wait() {
 	<-input.wait
 }
+
+func (input *FrameStreamSockInput) Close() error {
+	return input.listener.Close()
+}
