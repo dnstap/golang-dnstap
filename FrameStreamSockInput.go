@@ -17,16 +17,18 @@
 package dnstap
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
 // A FrameStreamSockInput collects dnstap data from one or more clients of
 // a listening socket.
 type FrameStreamSockInput struct {
-	wait     chan bool
+	wait     chan struct{}
 	listener net.Listener
 	timeout  time.Duration
 	log      Logger
@@ -35,9 +37,11 @@ type FrameStreamSockInput struct {
 // NewFrameStreamSockInput creates a FrameStreamSockInput collecting dnstap
 // data from clients which connect to the given listener.
 func NewFrameStreamSockInput(listener net.Listener) (input *FrameStreamSockInput) {
-	input = new(FrameStreamSockInput)
-	input.listener = listener
-	input.log = &nullLogger{}
+	input = &FrameStreamSockInput{
+		wait:     make(chan struct{}),
+		listener: listener,
+		log:      &nullLogger{},
+	}
 	return
 }
 
@@ -76,13 +80,23 @@ func NewFrameStreamSockInputFromPath(socketPath string) (input *FrameStreamSockI
 //
 // ReadInto satisfies the dnstap Input interface.
 func (input *FrameStreamSockInput) ReadInto(output chan []byte) {
-	var n uint64
+	var (
+		n     = uint64(0)
+		m     sync.Mutex // protects conns
+		conns = make(map[uint64]net.Conn)
+		wg    = &sync.WaitGroup{}
+	)
 	for {
 		conn, err := input.listener.Accept()
 		if err != nil {
 			input.log.Printf("%s: accept failed: %v\n",
 				input.listener.Addr(),
 				err)
+
+			if errors.Is(err, net.ErrClosed) {
+				break
+			}
+
 			continue
 		}
 		n++
@@ -100,12 +114,36 @@ func (input *FrameStreamSockInput) ReadInto(output chan []byte) {
 		input.log.Printf("%s: accepted connection %d%s",
 			conn.LocalAddr(), n, origin)
 		i.SetLogger(input.log)
+
+		// store the connection so we can close it later
+		m.Lock()
+		conns[n] = conn
+		m.Unlock()
+
+		wg.Add(1)
 		go func(cn uint64) {
+			defer wg.Done()
+
 			i.ReadInto(output)
 			input.log.Printf("%s: closed connection %d%s",
 				conn.LocalAddr(), cn, origin)
+
+			m.Lock()
+			delete(conns, n)
+			m.Unlock()
 		}(n)
 	}
+
+	// close all active connections
+	m.Lock()
+	for _, c := range conns {
+		_ = c.Close()
+	}
+	m.Unlock()
+
+	// wait for the readers to terminate
+	wg.Wait()
+	close(input.wait)
 }
 
 // Wait satisfies the dnstap Input interface.
@@ -113,5 +151,5 @@ func (input *FrameStreamSockInput) ReadInto(output chan []byte) {
 // The FrameSTreamSocketInput Wait method never returns, because the
 // corresponding Readinto method also never returns.
 func (input *FrameStreamSockInput) Wait() {
-	select {}
+	<-input.wait
 }
