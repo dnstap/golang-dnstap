@@ -46,6 +46,7 @@ var (
 	flagQuietText  = flag.Bool("q", false, "use quiet text output")
 	flagYamlText   = flag.Bool("y", false, "use verbose YAML output")
 	flagJSONText   = flag.Bool("j", false, "use verbose JSON output")
+	flagExtraFmt   = flag.String("x", "", "specify the 'extra' field format in output. Available options:\n - text (default)\n - hex\n - base64\nvalid when outputting YAML or JSON.")
 )
 
 func usage() {
@@ -116,10 +117,22 @@ func main() {
 		switch {
 		case *flagYamlText:
 			format = dnstap.YamlFormat
+			switch *flagExtraFmt{
+			case "hex":
+				format = dnstap.YamlFormatWithHexExtra
+			case "base64":
+				format = dnstap.YamlFormatWithBase64Extra
+			}
 		case *flagQuietText:
 			format = dnstap.TextFormat
 		case *flagJSONText:
 			format = dnstap.JSONFormat
+			switch *flagExtraFmt{
+			case "hex":
+				format = dnstap.JSONFormatWithHexExtra
+			case "base64":
+				format = dnstap.JSONFormatWithBase64Extra
+			}
 		}
 
 		o, err := newFileOutput(*flagWriteFile, format, *flagAppendFile)
