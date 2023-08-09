@@ -144,8 +144,11 @@ Available options for \fIformat-type\fR includes:
  - hex
  - base64
 
+For the default text format, if the 'extra' field in payload contains
+non-printable characters, the 'extra' text will be escaped.
+
 Valid only when the YAML or JSON format is specified with the \fB-y\fR
-or \fB-j\fR options.
+or \fB-j\fR options. (bianry output does not need a format)
 
 
 .SH EXAMPLES
