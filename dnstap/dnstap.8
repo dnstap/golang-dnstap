@@ -135,6 +135,22 @@ form similar to the output of \fBdig(1)\fR.
 At most one text format (\fB-j\fR, \fB-q\fR, or \fB-y\fR) option may be given.
 
 
+.TP
+.B -x \fIformat-type\fR
+Specify output format of the 'extra' field in dnstap payload if exists.
+
+Available options for \fIformat-type\fR includes:
+ - text (default)
+ - hex
+ - base64
+
+For the default text format, if the 'extra' field in payload contains
+non-printable characters, the 'extra' text will be escaped.
+
+Valid only when the YAML or JSON format is specified with the \fB-y\fR
+or \fB-j\fR options. (bianry output does not need a format)
+
+
 .SH EXAMPLES
 
 Listen for Dnstap data from a local name server and print quiet text format

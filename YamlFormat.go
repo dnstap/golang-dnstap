@@ -18,6 +18,7 @@ package dnstap
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"strconv"
@@ -98,9 +99,34 @@ func yamlConvertMessage(m *Message, s *bytes.Buffer) {
 	s.WriteString("---\n")
 }
 
+type ExtraFormat int
+
+const (
+	ExtraTextFmt ExtraFormat = iota
+	ExtraHexFmt
+	ExtraBase64Fmt
+)
+
 // YamlFormat renders a dnstap message in YAML format. Any encapsulated DNS
 // messages are rendered as strings in a format similar to 'dig' output.
+// "extra" field in dnstap payload may be escaped if it contains non-printable characters
 func YamlFormat(dt *Dnstap) (out []byte, ok bool) {
+	return yamlFormat(dt, ExtraTextFmt)
+}
+
+// YamlFormatWithHexExtra renders a dnstap message in YAML format.
+// Similar to YamlFormat, but "extra" field in dnstap payload rendered as hex.
+func YamlFormatWithHexExtra(dt *Dnstap) (out []byte, ok bool) {
+	return yamlFormat(dt, ExtraHexFmt)
+}
+
+// YamlFormatWithBase64Extra renders a dnstap message in YAML format.
+// Similar to YamlFormat, but "extra" field in dnstap payload rendered as base64.
+func YamlFormatWithBase64Extra(dt *Dnstap) (out []byte, ok bool) {
+	return yamlFormat(dt, ExtraBase64Fmt)
+}
+
+func yamlFormat(dt *Dnstap, extraFormat ExtraFormat) (out []byte, ok bool) {
 	var s bytes.Buffer
 
 	s.WriteString(fmt.Sprint("type: ", dt.Type, "\n"))
@@ -109,6 +135,16 @@ func YamlFormat(dt *Dnstap) (out []byte, ok bool) {
 	}
 	if dt.Version != nil {
 		s.WriteString(fmt.Sprint("version: ", strconv.Quote(string(dt.Version)), "\n"))
+	}
+	if dt.Extra != nil {
+		switch extraFormat {
+		case ExtraTextFmt:
+			s.WriteString(fmt.Sprint("extra: ", strconv.Quote(string(dt.Extra)), "\n"))
+		case ExtraHexFmt:
+			s.WriteString(fmt.Sprint("extra: ", fmt.Sprintf("%x", dt.Extra), "\n"))
+		case ExtraBase64Fmt:
+			s.WriteString(fmt.Sprint("extra: ", base64.StdEncoding.EncodeToString(dt.Extra), "\n"))
+		}
 	}
 	if *dt.Type == Dnstap_MESSAGE {
 		s.WriteString("message:\n")

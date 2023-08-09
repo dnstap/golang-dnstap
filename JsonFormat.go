@@ -16,9 +16,11 @@ package dnstap
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/miekg/dns"
@@ -35,6 +37,7 @@ type jsonDnstap struct {
 	Type     string      `json:"type"`
 	Identity string      `json:"identity,omitempty"`
 	Version  string      `json:"version,omitempty"`
+	Extra    string	     `json:"extra,omitempty"`
 	Message  jsonMessage `json:"message"`
 }
 
@@ -121,13 +124,46 @@ func convertJSONMessage(m *Message) jsonMessage {
 
 // JSONFormat renders a Dnstap message in JSON format. Any encapsulated
 // DNS messages are rendered as strings in a format similar to 'dig' output.
+// "extra" field may be escaped if it contains non-printable characters
 func JSONFormat(dt *Dnstap) (out []byte, ok bool) {
+	return jsonFormat(dt, ExtraTextFmt)
+}
+
+// JSONFormatWithHexExtra renders a Dnstap message in JSON format.
+// Similar to JSONFormat, but "extra" field in dnstap payload rendered as hex.
+func JSONFormatWithHexExtra(dt *Dnstap) (out []byte, ok bool) {
+	return jsonFormat(dt, ExtraHexFmt)
+}
+
+// JSONFormatWithBase64Extra renders a Dnstap message in JSON format.
+// Similar to JSONFormat, but "extra" field in dnstap payload rendered as base64.
+func JSONFormatWithBase64Extra(dt *Dnstap) (out []byte, ok bool) {
+	return jsonFormat(dt, ExtraBase64Fmt)
+}
+
+func jsonFormat(dt *Dnstap, extraFormat ExtraFormat) (out []byte, ok bool) {
 	var s bytes.Buffer
+
+	extra := ""
+	if dt.Extra != nil {
+		switch extraFormat {
+		case ExtraTextFmt:
+			// escape non-printable characters
+			extra = strconv.Quote(string(dt.Extra))
+			// remove added quotes
+			extra = extra[1 : len(extra)-1]
+		case ExtraHexFmt:
+			extra = fmt.Sprintf("%x", dt.Extra)
+		case ExtraBase64Fmt:
+			extra = base64.StdEncoding.EncodeToString(dt.Extra)
+		}
+	}
 
 	j, err := json.Marshal(jsonDnstap{
 		Type:     fmt.Sprint(dt.Type),
 		Identity: string(dt.Identity),
 		Version:  string(dt.Version),
+		Extra:    extra,
 		Message:  convertJSONMessage(dt.Message),
 	})
 	if err != nil {
